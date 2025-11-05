@@ -5,6 +5,7 @@ import { Appointment, BookingFormData, ScheduleConfiguration } from './types';
 import { optimizeAppointmentSchedule, OptimizeAppointmentScheduleInput } from '@/ai/flows/optimize-appointment-schedule';
 import { initializeServerFirebase } from '@/firebase/server-init';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, collectionGroup, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 // IMPORTANT: This file contains server-side logic only.
 // Client-side data fetching and mutations should use the hooks and utilities from '/firebase'.
@@ -128,7 +129,10 @@ export async function bookAppointmentAction(data: BookingFormData, date: string,
   } catch (error: any) {
     console.error("Booking failed:", error);
     // Return a generic error message to the client
-    return { success: false, error: "No se pudo crear el usuario o el turno. El email puede estar en uso." };
+    if (error.code === 'auth/email-already-in-use') {
+        return { success: false, error: 'Este email ya está registrado. Por favor, intente con otro.' };
+    }
+    return { success: false, error: "No se pudo crear el turno. Por favor, intente de nuevo." };
   }
 }
 
