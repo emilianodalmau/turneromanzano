@@ -1,0 +1,174 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the Turnos Manzano application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "dni": {
+          "type": "string",
+          "description": "The user's DNI (National Identity Document)."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The user's phone number."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "lastName",
+        "dni",
+        "phone",
+        "email"
+      ]
+    },
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents an appointment for a museum visit.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the appointment."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Appointment)"
+        },
+        "date": {
+          "type": "string",
+          "description": "The date of the appointment.",
+          "format": "date-time"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The start time of the appointment."
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The end time of the appointment."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "date",
+        "startTime",
+        "endTime"
+      ]
+    },
+    "ScheduleConfiguration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ScheduleConfiguration",
+      "type": "object",
+      "description": "Represents the configuration for available appointment days and times.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the schedule configuration."
+        },
+        "dayOfWeek": {
+          "type": "string",
+          "description": "The day of the week for the configuration (e.g., Monday, Tuesday)."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "The start time for available appointments on this day."
+        },
+        "endTime": {
+          "type": "string",
+          "description": "The end time for available appointments on this day."
+        }
+      },
+      "required": [
+        "id",
+        "dayOfWeek",
+        "startTime",
+        "endTime"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Path-based ownership enables straightforward security rules based on `request.auth.uid`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores appointments associated with a specific user.  Path-based ownership (user ID in the path) ensures that only the user can access their appointments.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier of the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/scheduleConfigurations/{scheduleConfigurationId}",
+        "definition": {
+          "entityName": "ScheduleConfiguration",
+          "schema": {
+            "$ref": "#/backend/entities/ScheduleConfiguration"
+          },
+          "description": "Stores configurations for available appointment days and times. Access should be restricted to administrators.",
+          "params": [
+            {
+              "name": "scheduleConfigurationId",
+              "description": "The unique identifier for the schedule configuration."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, Clarity of Intent, and support secure list operations (QAPs). It leverages path-based ownership for user data and schedule configurations, while appointments are structured under the respective user to ensure clear ownership and simplified security rules. \n\nAuthorization Independence:\n\n*   The `/users/{userId}/appointments/{appointmentId}` path establishes a clear ownership model where appointments are directly associated with users, eliminating the need to `get()` data from other collections to validate ownership.\n\nQAPs Support:\n\n*   The segregation of user-owned data under `/users/{userId}` allows for efficient and secure `list` operations scoped to individual users, without exposing data from other users. Schedule configurations are global, so rules can enforce only admin writes."
+  }
+}
