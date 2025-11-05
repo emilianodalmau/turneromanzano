@@ -46,25 +46,26 @@ export default function AdminNav() {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  tooltip={{ children: item.tooltip }}
-                >
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+                tooltip={{ children: item.tooltip }}
+              >
+                <Link href={item.href}>
                   <item.icon />
                   <span>{item.label}</span>
-                </SidebarMenuButton>
-              </Link>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
           <SidebarSeparator />
            <SidebarMenuItem>
-              <Link href="/" passHref legacyBehavior>
-                <SidebarMenuButton tooltip={{ children: 'Sitio Público' }}>
+              <SidebarMenuButton asChild tooltip={{ children: 'Sitio Público' }}>
+                <Link href="/">
                   <Home />
                   <span>Sitio Público</span>
-                </SidebarMenuButton>
-              </Link>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
