@@ -48,8 +48,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
-type AppointmentFormValues = z.infer<typeof appointmentFormSchema>;
-
 const appointmentFormSchema = z.object({
     name: z.string().min(1, 'Nombre es requerido'),
     lastName: z.string().min(1, 'Apellido es requerido'),
@@ -60,9 +58,11 @@ const appointmentFormSchema = z.object({
     time: z.string().min(1, 'Hora es requerida'),
 });
 
+type AppointmentFormValues = z.infer<typeof appointmentFormSchema>;
+
 export function AppointmentDataTable({ initialData }: { initialData: Appointment[] }) {
   const [data, setData] = useState(initialData);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialData.length === 0);
   const [isPending, startTransition] = useTransition();
   const [isFormOpen, setFormOpen] = useState(false);
   const [isAlertOpen, setAlertOpen] = useState(false);
@@ -76,11 +76,17 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
   });
 
   useEffect(() => {
-    getAppointments().then(appointments => {
-      setData(appointments);
-      setIsLoading(false);
-    })
-  }, []);
+    // Only fetch on client if initialData is empty, otherwise we already have it.
+    if (initialData.length === 0) {
+      setIsLoading(true);
+      getAppointments().then(appointments => {
+        setData(appointments);
+        setIsLoading(false);
+      })
+    } else {
+        setIsLoading(false);
+    }
+  }, [initialData]);
 
   const handleEdit = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
@@ -117,12 +123,16 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
     startTransition(async () => {
       try {
         if (selectedAppointment) {
-          const updated = await updateAppointment(selectedAppointment.id, values);
+          const updated = await updateAppointment(selectedAppointment.id, values as any);
           setData(data.map((item) => (item.id === updated.id ? updated : item)));
           toast({ title: 'Turno actualizado' });
         } else {
-          const created = await createAppointment(values);
-          setData([created, ...data].sort((a,b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime()));
+          const created = await createAppointment(values as any);
+          setData([created, ...data].sort((a,b) => {
+            const aTime = a.createdAt ? (a.createdAt.seconds * 1000) : 0;
+            const bTime = b.createdAt ? (b.createdAt.seconds * 1000) : 0;
+            return bTime - aTime;
+          }));
           toast({ title: 'Turno creado' });
         }
         setFormOpen(false);
@@ -135,7 +145,7 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex justify-end mb-4">
         <Button onClick={handleCreate}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Crear Turno
@@ -220,14 +230,15 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
                 <div><Label htmlFor="date">Fecha</Label><Input id="date" type="date" {...form.register('date')} /></div>
                 <div><Label htmlFor="time">Hora</Label><Input id="time" type="time" {...form.register('time')} /></div>
             </div>
-          </form>
+          
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
-            <Button onClick={form.handleSubmit(onSubmit)} disabled={isPending}>
+            <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
               Guardar
             </Button>
           </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
       

@@ -3,12 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { Appointment, BookingFormData, ScheduleConfiguration } from './types';
 import { optimizeAppointmentSchedule, OptimizeAppointmentScheduleInput } from '@/ai/flows/optimize-appointment-schedule';
-import { initializeFirebase } from '@/firebase/index';
-import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, collectionGroup, query, where, Timestamp } from 'firebase/firestore';
-import { signInAnonymously, createUserWithEmailAndPassword } from 'firebase/auth';
+import { initializeServerFirebase } from '@/firebase/server-init';
+import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, collectionGroup, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export async function getScheduleConfiguration(): Promise<ScheduleConfiguration> {
-  const { firestore } = initializeFirebase();
+  const { firestore } = initializeServerFirebase();
   const scheduleRef = doc(firestore, 'scheduleConfigurations', 'main_schedule');
   const scheduleSnap = await getDoc(scheduleRef);
 
@@ -31,7 +31,7 @@ export async function getScheduleConfiguration(): Promise<ScheduleConfiguration>
 }
 
 export async function getAvailableSlots(date: string): Promise<{ daySchedule: { enabled: boolean; slots: string[] }, availableSlots: string[] }> {
-    const { firestore } = initializeFirebase();
+    const { firestore } = initializeServerFirebase();
     const schedule = await getScheduleConfiguration();
     const dayOfWeek = new Date(date).getUTCDay();
     const dayNames: (keyof Omit<ScheduleConfiguration, 'id'>)[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -56,7 +56,7 @@ export async function getAvailableSlots(date: string): Promise<{ daySchedule: { 
 }
 
 export async function bookAppointment(data: BookingFormData, date: string, time: string) {
-  const { firestore, auth } = initializeFirebase();
+  const { firestore, auth } = initializeServerFirebase();
   const batch = writeBatch(firestore);
 
   // 1. Create a user with email and password
@@ -82,7 +82,7 @@ export async function bookAppointment(data: BookingFormData, date: string, time:
     userId: user.uid,
     date,
     time,
-    createdAt: Timestamp.now(),
+    createdAt: serverTimestamp(),
     // Include user details in appointment for easier retrieval in admin
     name: data.name,
     lastName: data.lastName,
@@ -96,20 +96,32 @@ export async function bookAppointment(data: BookingFormData, date: string, time:
 
   revalidatePath('/book');
   revalidatePath('/admin/appointments');
-  return appointmentPayload;
+  // we can't return a payload with a serverTimestamp, so we just return the data
+  return { ...appointmentPayload, createdAt: new Date() };
 }
 
 
 export async function getAppointments(): Promise<Appointment[]> {
-  const { firestore } = initializeFirebase();
+  const { firestore } = initializeServerFirebase();
   const appointmentsQuery = collectionGroup(firestore, 'appointments');
   const querySnapshot = await getDocs(appointmentsQuery);
-  const appointments = querySnapshot.docs.map(doc => doc.data() as Appointment);
-  return appointments.sort((a,b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime());
+  const appointments = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+          ...data,
+          // Convert Firestore Timestamp to a serializable format
+          createdAt: data.createdAt ? { seconds: data.createdAt.seconds, nanoseconds: data.createdAt.nanoseconds } : null
+      } as Appointment;
+  });
+  return appointments.sort((a,b) => {
+      const aTime = a.createdAt ? (a.createdAt.seconds * 1000) : new Date(`${a.date}T${a.time}`).getTime();
+      const bTime = b.createdAt ? (b.createdAt.seconds * 1000) : new Date(`${b.date}T${b.time}`).getTime();
+      return bTime - aTime;
+  });
 }
 
 export async function updateAppointment(id: string, data: Partial<Appointment>): Promise<Appointment> {
-    const { firestore } = initializeFirebase();
+    const { firestore } = initializeServerFirebase();
     
     // We need to find the user this appointment belongs to.
     const q = query(collectionGroup(firestore, 'appointments'), where('id', '==', id));
@@ -122,11 +134,16 @@ export async function updateAppointment(id: string, data: Partial<Appointment>):
     revalidatePath('/admin/appointments');
 
     const updatedDoc = await getDoc(appointmentRef);
-    return updatedDoc.data() as Appointment;
+    const updatedData = updatedDoc.data() as Appointment;
+     return {
+        ...updatedData,
+        // Convert Firestore Timestamp to a serializable format
+        createdAt: updatedData.createdAt ? { seconds: updatedData.createdAt.seconds, nanoseconds: updatedData.createdAt.nanoseconds } : null
+    } as Appointment;
 }
 
 export async function createAppointment(data: Omit<Appointment, 'id' | 'createdAt'>): Promise<Appointment> {
-    const { firestore, auth } = initializeFirebase();
+    const { firestore } = initializeServerFirebase();
     // In admin creation, we might not have a user session.
     // We'll create/find a user based on email.
     
@@ -160,17 +177,22 @@ export async function createAppointment(data: Omit<Appointment, 'id' | 'createdA
       id: appointmentRef.id,
       userId: userId,
       ...data,
-      createdAt: Timestamp.now()
+      createdAt: serverTimestamp() as any // Cast for server-side
     };
     await setDoc(appointmentRef, newAppointment);
 
     revalidatePath('/admin/appointments');
-    return newAppointment;
+    const savedData = (await getDoc(appointmentRef)).data() as Appointment
+     return {
+        ...savedData,
+        // Convert Firestore Timestamp to a serializable format
+        createdAt: savedData.createdAt ? { seconds: savedData.createdAt.seconds, nanoseconds: savedData.createdAt.nanoseconds } : null
+    } as Appointment;
 }
 
 
 export async function deleteAppointment(id: string): Promise<{ success: boolean }> {
-    const { firestore } = initializeFirebase();
+    const { firestore } = initializeServerFirebase();
     const q = query(collectionGroup(firestore, 'appointments'), where('id', '==', id));
     const snap = await getDocs(q);
 
@@ -187,7 +209,7 @@ export async function deleteAppointment(id: string): Promise<{ success: boolean 
 }
 
 export async function updateScheduleConfiguration(newSchedule: ScheduleConfiguration): Promise<ScheduleConfiguration> {
-    const { firestore } = initializeFirebase();
+    const { firestore } = initializeServerFirebase();
     const scheduleRef = doc(firestore, 'scheduleConfigurations', 'main_schedule');
     await setDoc(scheduleRef, newSchedule, { merge: true });
 

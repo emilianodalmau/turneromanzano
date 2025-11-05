@@ -1,7 +1,9 @@
 import { z } from 'zod';
+import { Timestamp } from 'firebase/firestore';
 
 export interface Appointment {
   id: string;
+  userId: string;
   name: string;
   lastName: string;
   dni: string;
@@ -12,7 +14,7 @@ export interface Appointment {
   createdAt: {
     seconds: number;
     nanoseconds: number;
-  };
+  } | Timestamp | null;
 }
 
 export interface ScheduleDay {
