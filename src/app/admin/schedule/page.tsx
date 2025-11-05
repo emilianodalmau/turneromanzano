@@ -3,12 +3,14 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ScheduleConfiguration } from '@/lib/types';
-import { updateScheduleConfigurationAction, getScheduleConfiguration } from '@/lib/actions';
+import { updateScheduleConfigurationAction } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleDayCard } from '@/components/admin/ScheduleDayCard';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const dayNames: Record<keyof Omit<ScheduleConfiguration, 'id'>, string> = {
   monday: 'Lunes',
@@ -20,35 +22,42 @@ const dayNames: Record<keyof Omit<ScheduleConfiguration, 'id'>, string> = {
   sunday: 'Domingo',
 };
 
+const defaultConfig: ScheduleConfiguration = {
+  id: 'main_schedule',
+  monday: { enabled: false, slots: [] },
+  tuesday: { enabled: true, slots: ['10:00', '11:00', '14:00', '15:00'] },
+  wednesday: { enabled: true, slots: ['10:00', '11:00', '14:00', '15:00'] },
+  thursday: { enabled: true, slots: ['10:00', '11:00', '14:00', '15:00'] },
+  friday: { enabled: true, slots: ['10:00', '11:00', '14:00', '15:00'] },
+  saturday: { enabled: true, slots: ['09:00', '10:00', '11:00', '12:00'] },
+  sunday: { enabled: false, slots: [] },
+};
+
 export default function SchedulePage() {
-  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const scheduleRef = useMemoFirebase(() => 
+    firestore ? doc(firestore, 'scheduleConfigurations', 'main_schedule') : null
+  , [firestore]);
+
+  const { data: scheduleConfig, isLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
 
   const form = useForm<ScheduleConfiguration>({
-    defaultValues: {
-      monday: { enabled: false, slots: [] },
-      tuesday: { enabled: false, slots: [] },
-      wednesday: { enabled: false, slots: [] },
-      thursday: { enabled: false, slots: [] },
-      friday: { enabled: false, slots: [] },
-      saturday: { enabled: false, slots: [] },
-      sunday: { enabled: false, slots: [] },
-    }
+    defaultValues: defaultConfig
   });
 
   useEffect(() => {
-    setIsLoading(true);
-    getScheduleConfiguration().then(data => {
-      if (data) {
-        form.reset(data);
-      }
-      setIsLoading(false);
-    }).catch(() => {
-        toast({ title: 'Error', description: 'No se pudo cargar la configuración.', variant: 'destructive' });
-        setIsLoading(false);
-    });
-  }, [form, toast]);
+    if (scheduleConfig) {
+      form.reset(scheduleConfig);
+    } else if (!isLoading && !scheduleConfig && firestore && scheduleRef) {
+      // If loading is finished, no config exists, create the default one.
+      setDoc(scheduleRef, defaultConfig).catch(() => {
+          toast({ title: 'Error', description: 'No se pudo crear la configuración inicial.', variant: 'destructive' });
+      });
+    }
+  }, [scheduleConfig, isLoading, form, firestore, scheduleRef, toast]);
   
   const onSubmit = (data: ScheduleConfiguration) => {
     startTransition(async () => {
