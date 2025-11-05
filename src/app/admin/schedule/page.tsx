@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleDayCard } from '@/components/admin/ScheduleDayCard';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, setDoc, DocumentReference } from 'firebase/firestore';
+import { doc, DocumentReference } from 'firebase/firestore';
 
 const dayNames: Record<keyof Omit<ScheduleConfiguration, 'id'>, string> = {
   monday: 'Lunes',
@@ -51,30 +51,17 @@ export default function SchedulePage() {
     if (scheduleConfig) {
       form.reset(scheduleConfig);
     } else if (!isLoading && !scheduleConfig && firestore && scheduleRef) {
-      // If loading is finished, no config exists, create the default one.
-      setDoc(scheduleRef, defaultConfig).catch(() => {
-          toast({ title: 'Error', description: 'No se pudo crear la configuración inicial.', variant: 'destructive' });
-      });
+      // If loading is finished, no config exists, create the default one using our non-blocking function.
+      setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
     }
-  }, [scheduleConfig, isLoading, form, firestore, scheduleRef, toast]);
+  }, [scheduleConfig, isLoading, form, firestore, scheduleRef]);
   
   const onSubmit = (data: ScheduleConfiguration) => {
     if (!firestore || !scheduleRef) return;
     
     startTransition(() => {
-      const cleanData: ScheduleConfiguration = {
-        id: 'main_schedule',
-        monday: data.monday,
-        tuesday: data.tuesday,
-        wednesday: data.wednesday,
-        thursday: data.thursday,
-        friday: data.friday,
-        saturday: data.saturday,
-        sunday: data.sunday,
-      };
-
-      setDocumentNonBlocking(scheduleRef, cleanData, { merge: false });
-      
+      // Pass the form data directly, ensuring it matches the expected type.
+      setDocumentNonBlocking(scheduleRef, data, { merge: false });
       toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
     });
   };
