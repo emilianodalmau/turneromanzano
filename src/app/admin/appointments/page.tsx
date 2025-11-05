@@ -1,10 +1,8 @@
-import { getAppointments } from "@/lib/actions";
 import { AppointmentDataTable } from "./data-table";
 
 export default async function AppointmentsPage() {
-  // Initial data is fetched here, but the data-table will re-fetch on client-side
-  const initialAppointments = await getAppointments();
-
+  // Data fetching is now handled client-side by the data-table component
+  // using a real-time listener from Firestore.
   return (
     <div className="space-y-6">
       <div>
@@ -12,10 +10,10 @@ export default async function AppointmentsPage() {
           Gestión de Turnos
         </h1>
         <p className="text-muted-foreground">
-          Vea, cree, edite y elimine los turnos de los visitantes.
+          Vea, cree, edite y elimine los turnos de los visitantes en tiempo real.
         </p>
       </div>
-      <AppointmentDataTable initialData={initialAppointments} />
+      <AppointmentDataTable />
     </div>
   );
 }

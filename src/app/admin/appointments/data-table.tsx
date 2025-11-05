@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { z } from 'zod';
+import { collectionGroup, doc, collection, query, where } from 'firebase/firestore';
 
 import { Appointment } from '@/lib/types';
-import { createAppointment, deleteAppointment, updateAppointment, getAppointments } from '@/lib/actions';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
 import {
   Table,
   TableBody,
@@ -60,9 +63,11 @@ const appointmentFormSchema = z.object({
 
 type AppointmentFormValues = z.infer<typeof appointmentFormSchema>;
 
-export function AppointmentDataTable({ initialData }: { initialData: Appointment[] }) {
-  const [data, setData] = useState(initialData);
-  const [isLoading, setIsLoading] = useState(initialData.length === 0);
+export function AppointmentDataTable() {
+  const firestore = useFirestore();
+  const appointmentsQuery = useMemoFirebase(() => collectionGroup(firestore, 'appointments'), [firestore]);
+  const { data: appointments, isLoading } = useCollection<Appointment>(appointmentsQuery);
+
   const [isPending, startTransition] = useTransition();
   const [isFormOpen, setFormOpen] = useState(false);
   const [isAlertOpen, setAlertOpen] = useState(false);
@@ -75,24 +80,20 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
     defaultValues: { name: '', lastName: '', dni: '', phone: '', email: '', date: '', time: '' },
   });
 
-  useEffect(() => {
-    // Only fetch on client if initialData is empty, otherwise we already have it.
-    if (initialData.length === 0) {
-      setIsLoading(true);
-      getAppointments().then(appointments => {
-        setData(appointments);
-        setIsLoading(false);
-      })
-    } else {
-        setIsLoading(false);
-    }
-  }, [initialData]);
+  const sortedData = useMemo(() => {
+    if (!appointments) return [];
+    return [...appointments].sort((a,b) => {
+        const aTime = a.createdAt ? (a.createdAt.seconds * 1000) : new Date(`${a.date}T${a.time}`).getTime();
+        const bTime = b.createdAt ? (b.createdAt.seconds * 1000) : new Date(`${b.date}T${b.time}`).getTime();
+        return bTime - aTime;
+    });
+  }, [appointments]);
 
   const handleEdit = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     form.reset({
       ...appointment,
-      date: format(new Date(appointment.date), 'yyyy-MM-dd') // Ensure date is in correct format for input
+      date: format(new Date(appointment.date), 'yyyy-MM-dd')
     });
     setFormOpen(true);
   };
@@ -110,36 +111,63 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
 
   const confirmDelete = () => {
     if (!selectedAppointment) return;
-    startTransition(async () => {
-      await deleteAppointment(selectedAppointment.id);
-      setData(data.filter((item) => item.id !== selectedAppointment.id));
-      toast({ title: 'Turno eliminado', description: 'El turno ha sido eliminado con éxito.' });
-      setAlertOpen(false);
-      setSelectedAppointment(null);
+
+    startTransition(() => {
+        const appointmentRef = doc(firestore, `users/${selectedAppointment.userId}/appointments/${selectedAppointment.id}`);
+        deleteDocumentNonBlocking(appointmentRef);
+        toast({ title: 'Turno eliminado', description: 'El turno ha sido eliminado con éxito.' });
+        setAlertOpen(false);
+        setSelectedAppointment(null);
     });
   };
 
   const onSubmit = (values: AppointmentFormValues) => {
-    startTransition(async () => {
-      try {
-        if (selectedAppointment) {
-          const updated = await updateAppointment(selectedAppointment.id, values as any);
-          setData(data.map((item) => (item.id === updated.id ? updated : item)));
-          toast({ title: 'Turno actualizado' });
-        } else {
-          const created = await createAppointment(values as any);
-          setData([created, ...data].sort((a,b) => {
-            const aTime = a.createdAt ? (a.createdAt.seconds * 1000) : 0;
-            const bTime = b.createdAt ? (b.createdAt.seconds * 1000) : 0;
-            return bTime - aTime;
-          }));
-          toast({ title: 'Turno creado' });
+    startTransition(() => {
+        let docRef;
+        let userId = selectedAppointment?.userId;
+        let appointmentId = selectedAppointment?.id;
+
+        const payload: Omit<Appointment, 'createdAt'> = {
+            id: '',
+            userId: '',
+            name: values.name,
+            lastName: values.lastName,
+            dni: values.dni,
+            phone: values.phone,
+            email: values.email,
+            date: values.date,
+            time: values.time,
+        };
+
+        if (selectedAppointment) { // Editing
+            userId = selectedAppointment.userId;
+            appointmentId = selectedAppointment.id;
+            docRef = doc(firestore, `users/${userId}/appointments/${appointmentId}`);
+            payload.id = appointmentId;
+            payload.userId = userId;
+        } else { // Creating
+            // This is a simplified approach. In a real-world scenario, you would
+            // likely have a more robust way to handle user creation or selection
+            // for admin-created appointments. Here we'll just create a new user doc path.
+            const userRef = doc(collection(firestore, 'users'));
+            userId = userRef.id;
+            const newAppointmentRef = doc(collection(firestore, `users/${userId}/appointments`));
+            appointmentId = newAppointmentRef.id;
+            
+            docRef = newAppointmentRef;
+            payload.id = appointmentId;
+            payload.userId = userId;
+            
+            // Also create the user profile
+            const userPayload = { id: userId, ...values };
+            setDocumentNonBlocking(userRef, userPayload, { merge: false });
         }
+        
+        setDocumentNonBlocking(docRef, payload, { merge: true });
+        
+        toast({ title: selectedAppointment ? 'Turno actualizado' : 'Turno creado' });
         setFormOpen(false);
         setSelectedAppointment(null);
-      } catch (error) {
-        toast({ title: 'Error', description: 'No se pudo guardar el turno.', variant: 'destructive' });
-      }
     });
   };
 
@@ -168,8 +196,8 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
                   <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                 </TableCell>
               </TableRow>
-            ) : data.length > 0 ? (
-              data.map((appointment) => (
+            ) : sortedData.length > 0 ? (
+              sortedData.map((appointment) => (
                 <TableRow key={appointment.id}>
                   <TableCell>
                     <div className="font-medium">{format(new Date(appointment.date), "PPP", { locale: es })}</div>

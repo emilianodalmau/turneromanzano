@@ -5,7 +5,9 @@ import { Appointment, BookingFormData, ScheduleConfiguration } from './types';
 import { optimizeAppointmentSchedule, OptimizeAppointmentScheduleInput } from '@/ai/flows/optimize-appointment-schedule';
 import { initializeServerFirebase } from '@/firebase/server-init';
 import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, collectionGroup, query, where, Timestamp, serverTimestamp } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+
+// IMPORTANT: This file contains server-side logic only.
+// Client-side data fetching and mutations should use the hooks and utilities from '/firebase'.
 
 export async function getScheduleConfiguration(): Promise<ScheduleConfiguration> {
   const { firestore } = initializeServerFirebase();
@@ -46,6 +48,7 @@ export async function getAvailableSlots(date: string): Promise<{ daySchedule: { 
         return { daySchedule: { enabled: false, slots: [] }, availableSlots: [] };
     }
 
+    // This is a server action, it can query across all users' appointments
     const appointmentsQuery = query(collectionGroup(firestore, 'appointments'), where('date', '==', date));
     const appointmentsSnap = await getDocs(appointmentsQuery);
     const bookedSlots = appointmentsSnap.docs.map(doc => doc.data().time);
@@ -55,64 +58,19 @@ export async function getAvailableSlots(date: string): Promise<{ daySchedule: { 
     return { daySchedule, availableSlots };
 }
 
-export async function bookAppointment(data: BookingFormData, date: string, time: string) {
-  const { firestore, auth } = initializeServerFirebase();
-  const batch = writeBatch(firestore);
-
-  // 1. Create a user with email and password
-  const userCredential = await createUserWithEmailAndPassword(auth, data.email, `dni${data.dni}`);
-  const user = userCredential.user;
-
-  // 2. Create the user profile document
-  const userRef = doc(firestore, 'users', user.uid);
-  const userPayload = { 
-      id: user.uid,
-      name: data.name,
-      lastName: data.lastName,
-      dni: data.dni,
-      phone: data.phone,
-      email: data.email
-  };
-  batch.set(userRef, userPayload);
-  
-  // 3. Create the appointment document
-  const appointmentRef = doc(collection(firestore, `users/${user.uid}/appointments`));
-  const appointmentPayload = {
-    id: appointmentRef.id,
-    userId: user.uid,
-    date,
-    time,
-    createdAt: serverTimestamp(),
-    // Include user details in appointment for easier retrieval in admin
-    name: data.name,
-    lastName: data.lastName,
-    dni: data.dni,
-    phone: data.phone,
-    email: data.email,
-  };
-  batch.set(appointmentRef, appointmentPayload);
-
-  await batch.commit();
-
-  revalidatePath('/book');
-  revalidatePath('/admin/appointments');
-  // we can't return a payload with a serverTimestamp, so we just return the data
-  return { ...appointmentPayload, createdAt: new Date() };
-}
-
-
 export async function getAppointments(): Promise<Appointment[]> {
   const { firestore } = initializeServerFirebase();
   const appointmentsQuery = collectionGroup(firestore, 'appointments');
   const querySnapshot = await getDocs(appointmentsQuery);
   const appointments = querySnapshot.docs.map(doc => {
       const data = doc.data();
+      // Firestore Timestamps need to be converted to a serializable format for the client
       return {
           ...data,
-          // Convert Firestore Timestamp to a serializable format
           createdAt: data.createdAt ? { seconds: data.createdAt.seconds, nanoseconds: data.createdAt.nanoseconds } : null
       } as Appointment;
   });
+  // Sort on the server before sending to the client
   return appointments.sort((a,b) => {
       const aTime = a.createdAt ? (a.createdAt.seconds * 1000) : new Date(`${a.date}T${a.time}`).getTime();
       const bTime = b.createdAt ? (b.createdAt.seconds * 1000) : new Date(`${b.date}T${b.time}`).getTime();
@@ -120,108 +78,65 @@ export async function getAppointments(): Promise<Appointment[]> {
   });
 }
 
-export async function updateAppointment(id: string, data: Partial<Appointment>): Promise<Appointment> {
-    const { firestore } = initializeServerFirebase();
+// This function is complex and involves auth, it will remain a server action.
+export async function bookAppointmentAction(data: BookingFormData, date: string, time: string) {
+  const { firestore, auth } = initializeServerFirebase();
+  
+  // A real app should have more robust user handling (e.g. sign in with providers)
+  // For simplicity, we create a new user for each booking.
+  // We use a password that is not secure, in a real app use a secure password or a different auth method.
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, data.email, `dni${data.dni}`);
+    const user = userCredential.user;
     
-    // We need to find the user this appointment belongs to.
-    const q = query(collectionGroup(firestore, 'appointments'), where('id', '==', id));
-    const snap = await getDocs(q);
-    if (snap.empty) throw new Error("Appointment not found");
-    const appointmentRef = snap.docs[0].ref;
+    const batch = writeBatch(firestore);
 
-    await setDoc(appointmentRef, data, { merge: true });
-    
-    revalidatePath('/admin/appointments');
-
-    const updatedDoc = await getDoc(appointmentRef);
-    const updatedData = updatedDoc.data() as Appointment;
-     return {
-        ...updatedData,
-        // Convert Firestore Timestamp to a serializable format
-        createdAt: updatedData.createdAt ? { seconds: updatedData.createdAt.seconds, nanoseconds: updatedData.createdAt.nanoseconds } : null
-    } as Appointment;
-}
-
-export async function createAppointment(data: Omit<Appointment, 'id' | 'createdAt'>): Promise<Appointment> {
-    const { firestore } = initializeServerFirebase();
-    // In admin creation, we might not have a user session.
-    // We'll create/find a user based on email.
-    
-    // This is a simplified approach. A real app would handle user lookups more robustly.
-    const tempEmail = data.email || `${data.dni}@example.com`;
-    let userId = '';
-
-    // Simplified: Look for user by DNI in users collection instead of auth service
-    const usersRef = collection(firestore, 'users');
-    const userQuery = query(usersRef, where('dni', '==', data.dni));
-    const userSnap = await getDocs(userQuery);
-
-    if (!userSnap.empty) {
-        userId = userSnap.docs[0].id;
-    } else {
-        // If user doesn't exist, create one (in a real app, you'd separate user creation)
-         const newUserRef = doc(usersRef);
-         userId = newUserRef.id;
-         await setDoc(newUserRef, {
-            id: userId,
-            dni: data.dni,
-            email: data.email,
-            name: data.name,
-            lastName: data.lastName,
-            phone: data.phone,
-         });
-    }
-
-    const appointmentRef = doc(collection(firestore, `users/${userId}/appointments`));
-    const newAppointment: Appointment = {
-      id: appointmentRef.id,
-      userId: userId,
-      ...data,
-      createdAt: serverTimestamp() as any // Cast for server-side
+    // Create the user profile document
+    const userRef = doc(firestore, 'users', user.uid);
+    const userPayload = { 
+        id: user.uid,
+        name: data.name,
+        lastName: data.lastName,
+        dni: data.dni,
+        phone: data.phone,
+        email: data.email
     };
-    await setDoc(appointmentRef, newAppointment);
-
-    revalidatePath('/admin/appointments');
-    const savedData = (await getDoc(appointmentRef)).data() as Appointment
-     return {
-        ...savedData,
-        // Convert Firestore Timestamp to a serializable format
-        createdAt: savedData.createdAt ? { seconds: savedData.createdAt.seconds, nanoseconds: savedData.createdAt.nanoseconds } : null
-    } as Appointment;
-}
-
-
-export async function deleteAppointment(id: string): Promise<{ success: boolean }> {
-    const { firestore } = initializeServerFirebase();
-    const q = query(collectionGroup(firestore, 'appointments'), where('id', '==', id));
-    const snap = await getDocs(q);
-
-    if (snap.empty) {
-      console.warn("Could not find appointment to delete");
-      return { success: false };
-    }
+    batch.set(userRef, userPayload);
     
-    await deleteDoc(snap.docs[0].ref);
+    // Create the appointment document
+    const appointmentRef = doc(collection(firestore, `users/${user.uid}/appointments`));
+    const appointmentPayload = {
+      id: appointmentRef.id,
+      userId: user.uid,
+      date,
+      time,
+      createdAt: serverTimestamp(),
+      name: data.name,
+      lastName: data.lastName,
+      dni: data.dni,
+      phone: data.phone,
+      email: data.email,
+    };
+    batch.set(appointmentRef, appointmentPayload);
 
+    await batch.commit();
+
+    revalidatePath('/book');
     revalidatePath('/admin/appointments');
-    revalidatePath('/book');
-    return { success: true };
-}
-
-export async function updateScheduleConfiguration(newSchedule: ScheduleConfiguration): Promise<ScheduleConfiguration> {
-    const { firestore } = initializeServerFirebase();
-    const scheduleRef = doc(firestore, 'scheduleConfigurations', 'main_schedule');
-    await setDoc(scheduleRef, newSchedule, { merge: true });
-
-    revalidatePath('/admin/schedule');
-    revalidatePath('/book');
-    return newSchedule;
+    // We can't return the payload with a serverTimestamp, so we create a new Date.
+    return { success: true, data: { ...appointmentPayload, createdAt: new Date() } };
+  } catch (error: any) {
+    console.error("Booking failed:", error);
+    // Return a generic error message to the client
+    return { success: false, error: "No se pudo crear el usuario o el turno. El email puede estar en uso." };
+  }
 }
 
 export async function runOptimization() {
   try {
     const historicalData = await getAppointments();
     
+    // This is a placeholder for a more complex demand prediction model
     const predictedDemand = {
       "next_month_trend": "increase",
       "peak_days": ["saturday", "friday"],
@@ -241,4 +156,20 @@ export async function runOptimization() {
     console.error("Optimization failed:", error);
     return { success: false, error: "Failed to run optimization." };
   }
+}
+
+// Server Action for updating the schedule. We keep this on the server
+// as it's a core administrative function.
+export async function updateScheduleConfigurationAction(newSchedule: ScheduleConfiguration): Promise<{success: boolean, error?: string}> {
+    const { firestore } = initializeServerFirebase();
+    const scheduleRef = doc(firestore, 'scheduleConfigurations', 'main_schedule');
+    try {
+      await setDoc(scheduleRef, newSchedule, { merge: true });
+      revalidatePath('/admin/schedule');
+      revalidatePath('/book'); // So clients get new slots
+      return { success: true };
+    } catch(error: any) {
+      console.error("Failed to update schedule:", error);
+      return { success: false, error: "No se pudo guardar la configuración." };
+    }
 }

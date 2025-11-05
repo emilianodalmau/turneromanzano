@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { add, format, startOfDay } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 
@@ -15,8 +15,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { bookingFormSchema, BookingFormData, ScheduleDay } from '@/lib/types';
-import { bookAppointment, getAvailableSlots } from '@/lib/actions';
+import { bookingFormSchema, BookingFormData } from '@/lib/types';
+import { bookAppointmentAction, getAvailableSlots } from '@/lib/actions';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -60,13 +60,13 @@ export default function BookPage() {
     if (!date || !time) return;
 
     startTransition(async () => {
-      try {
-        await bookAppointment(data, format(date, 'yyyy-MM-dd'), time);
+      const result = await bookAppointmentAction(data, format(date, 'yyyy-MM-dd'), time);
+      if (result.success) {
         router.push(`/confirmation?date=${format(date, 'yyyy-MM-dd')}&time=${time}`);
-      } catch (error) {
+      } else {
         toast({
-          title: 'Error',
-          description: 'No se pudo crear el turno. Por favor, intente de nuevo.',
+          title: 'Error en la Reserva',
+          description: result.error || 'No se pudo crear el turno. Por favor, intente de nuevo.',
           variant: 'destructive',
         });
       }

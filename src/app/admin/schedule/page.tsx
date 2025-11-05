@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { ScheduleConfiguration, ScheduleDay } from '@/lib/types';
-import { updateScheduleConfiguration, getScheduleConfiguration } from '@/lib/actions';
+import { ScheduleConfiguration } from '@/lib/types';
+import { updateScheduleConfigurationAction, getScheduleConfiguration } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
 
 const dayNames: Record<keyof Omit<ScheduleConfiguration, 'id'>, string> = {
   monday: 'Lunes',
@@ -31,25 +30,28 @@ export default function SchedulePage() {
   const form = useForm<ScheduleConfiguration>();
   
   useEffect(() => {
+    setIsLoading(true);
     getScheduleConfiguration().then(data => {
       form.reset(data);
       setIsLoading(false);
+    }).catch(() => {
+        toast({ title: 'Error', description: 'No se pudo cargar la configuración.', variant: 'destructive' });
+        setIsLoading(false);
     });
-  }, [form]);
+  }, [form, toast]);
 
   const { fields, append, remove } = useFieldArray({
       control: form.control,
-      // @ts-ignore
-      name: `saturday.slots` // just a sample name to init
+      name: `saturday.slots`
   });
   
   const onSubmit = (data: ScheduleConfiguration) => {
     startTransition(async () => {
-      try {
-        await updateScheduleConfiguration(data);
+      const { success, error } = await updateScheduleConfigurationAction(data);
+      if (success) {
         toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
-      } catch (error) {
-        toast({ title: 'Error', description: 'No se pudo guardar la configuración.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Error', description: error || 'No se pudo guardar la configuración.', variant: 'destructive' });
       }
     });
   };
@@ -75,9 +77,10 @@ export default function SchedulePage() {
         <Card>
           <CardHeader>
             <CardTitle>Disponibilidad Semanal</CardTitle>
+            <CardDescription>Active o desactive días y administre los horarios para cada uno.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {Object.keys(dayNames).map((day, index) => {
+            {Object.keys(dayNames).map((day) => {
               const dayKey = day as keyof Omit<ScheduleConfiguration, 'id'>;
               const { fields, append, remove } = useFieldArray({
                 control: form.control,
@@ -95,7 +98,7 @@ export default function SchedulePage() {
                     />
                   </div>
                   {form.watch(`${dayKey}.enabled`) && (
-                    <div className="pl-2 border-l-2 border-border ml-2 space-y-3">
+                    <div className="pl-2 border-l-2 border-border ml-2 space-y-3 pt-2">
                       <Label className="text-sm font-medium">Horarios disponibles</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                         {fields.map((field, slotIndex) => (
