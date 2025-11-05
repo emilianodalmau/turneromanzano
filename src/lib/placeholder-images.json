@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "manzano-water-1",
+      "description": "A beautiful clear blue lake surrounded by mountains.",
+      "imageUrl": "https://images.unsplash.com/photo-1727400463630-ff2d0bd0853b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjbGVhciUyMGxha2V8ZW58MHx8fHwxNzYyMjc0NTE4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "clear lake"
+    },
+    {
+      "id": "manzano-apple-1",
+      "description": "An apple orchard with rows of apple trees.",
+      "imageUrl": "https://images.unsplash.com/photo-1600752085601-1ec2646cd736?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhcHBsZSUyMG9yY2hhcmR8ZW58MHx8fHwxNzYyMzQ5Nzg5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "apple orchard"
+    },
+    {
+      "id": "manzano-building-1",
+      "description": "A modern municipal building with glass windows.",
+      "imageUrl": "https://images.unsplash.com/photo-1619218070141-bcfeb8b93074?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxtb2Rlcm4lMjBidWlsZGluZ3xlbnwwfHx8fDE3NjIyNTM4MTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern building"
+    }
+  ]
 }
