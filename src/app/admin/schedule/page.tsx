@@ -61,7 +61,19 @@ export default function SchedulePage() {
   
   const onSubmit = (data: ScheduleConfiguration) => {
     startTransition(async () => {
-      const { success, error } = await updateScheduleConfigurationAction(data);
+      // Create a clean data object without the react-hook-form internals
+      const cleanData: ScheduleConfiguration = {
+        id: 'main_schedule',
+        monday: data.monday,
+        tuesday: data.tuesday,
+        wednesday: data.wednesday,
+        thursday: data.thursday,
+        friday: data.friday,
+        saturday: data.saturday,
+        sunday: data.sunday,
+      };
+
+      const { success, error } = await updateScheduleConfigurationAction(cleanData);
       if (success) {
         toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
       } else {
