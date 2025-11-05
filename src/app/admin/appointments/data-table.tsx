@@ -43,7 +43,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -116,7 +115,7 @@ export function AppointmentDataTable() {
   };
 
   const confirmDelete = () => {
-    if (!selectedAppointment) return;
+    if (!selectedAppointment || !firestore) return;
 
     startTransition(() => {
         const appointmentRef = doc(firestore, `users/${selectedAppointment.userId}/appointments/${selectedAppointment.id}`);
@@ -128,14 +127,15 @@ export function AppointmentDataTable() {
   };
 
   const onSubmit = (values: AppointmentFormValues) => {
+    if (!firestore) return;
+
     startTransition(() => {
         let docRef;
         let userId = selectedAppointment?.userId;
         let appointmentId = selectedAppointment?.id;
 
-        const payload: Omit<Appointment, 'createdAt'> = {
-            id: '',
-            userId: '',
+        // Base payload for the appointment
+        const appointmentPayload: Omit<Appointment, 'createdAt' | 'id' | 'userId'> = {
             name: values.name,
             lastName: values.lastName,
             dni: values.dni,
@@ -145,13 +145,14 @@ export function AppointmentDataTable() {
             time: values.time,
         };
 
-        if (selectedAppointment) { // Editing
+        if (selectedAppointment) { // Editing existing appointment
             userId = selectedAppointment.userId;
             appointmentId = selectedAppointment.id;
             docRef = doc(firestore, `users/${userId}/appointments/${appointmentId}`);
-            payload.id = appointmentId;
-            payload.userId = userId;
-        } else { // Creating
+            
+            setDocumentNonBlocking(docRef, appointmentPayload, { merge: true });
+        
+        } else { // Creating a new appointment
             // This is a simplified approach. In a real-world scenario, you would
             // likely have a more robust way to handle user creation or selection
             // for admin-created appointments. Here we'll just create a new user doc path.
@@ -161,15 +162,27 @@ export function AppointmentDataTable() {
             appointmentId = newAppointmentRef.id;
             
             docRef = newAppointmentRef;
-            payload.id = appointmentId;
-            payload.userId = userId;
             
-            // Also create the user profile
-            const userPayload = { id: userId, ...values };
+            // Create the appointment with its new IDs
+            const finalAppointmentPayload: Appointment = {
+                ...appointmentPayload,
+                id: appointmentId,
+                userId: userId,
+                createdAt: new Date() as any, // Firestore will convert this to Timestamp
+            };
+            setDocumentNonBlocking(docRef, finalAppointmentPayload, { merge: false });
+            
+            // Also create a simple user profile
+            const userPayload = { 
+                id: userId,
+                name: values.name,
+                lastName: values.lastName,
+                dni: values.dni,
+                phone: values.phone,
+                email: values.email,
+            };
             setDocumentNonBlocking(userRef, userPayload, { merge: false });
         }
-        
-        setDocumentNonBlocking(docRef, payload, { merge: true });
         
         toast({ title: selectedAppointment ? 'Turno actualizado' : 'Turno creado' });
         setFormOpen(false);
