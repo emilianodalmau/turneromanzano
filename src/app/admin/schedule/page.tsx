@@ -3,13 +3,12 @@
 import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ScheduleConfiguration } from '@/lib/types';
-import { updateScheduleConfigurationAction } from '@/lib/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleDayCard } from '@/components/admin/ScheduleDayCard';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
 const dayNames: Record<keyof Omit<ScheduleConfiguration, 'id'>, string> = {
@@ -60,8 +59,9 @@ export default function SchedulePage() {
   }, [scheduleConfig, isLoading, form, firestore, scheduleRef, toast]);
   
   const onSubmit = (data: ScheduleConfiguration) => {
-    startTransition(async () => {
-      // Create a clean data object without the react-hook-form internals
+    if (!firestore || !scheduleRef) return;
+    
+    startTransition(() => {
       const cleanData: ScheduleConfiguration = {
         id: 'main_schedule',
         monday: data.monday,
@@ -73,12 +73,9 @@ export default function SchedulePage() {
         sunday: data.sunday,
       };
 
-      const { success, error } = await updateScheduleConfigurationAction(cleanData);
-      if (success) {
-        toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
-      } else {
-        toast({ title: 'Error', description: error || 'No se pudo guardar la configuración.', variant: 'destructive' });
-      }
+      setDocumentNonBlocking(scheduleRef, cleanData, { merge: false });
+      
+      toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
     });
   };
 

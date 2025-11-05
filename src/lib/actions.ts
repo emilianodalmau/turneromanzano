@@ -161,19 +161,3 @@ export async function runOptimization() {
     return { success: false, error: "Failed to run optimization." };
   }
 }
-
-// Server Action for updating the schedule. We keep this on the server
-// as it's a core administrative function.
-export async function updateScheduleConfigurationAction(newSchedule: ScheduleConfiguration): Promise<{success: boolean, error?: string}> {
-    const { firestore } = initializeServerFirebase();
-    const scheduleRef = doc(firestore, 'scheduleConfigurations', 'main_schedule');
-    try {
-      await setDoc(scheduleRef, newSchedule);
-      revalidatePath('/admin/schedule');
-      revalidatePath('/book'); // So clients get new slots
-      return { success: true };
-    } catch(error: any) {
-      console.error("Failed to update schedule:", error);
-      return { success: false, error: "No se pudo guardar la configuración." };
-    }
-}
