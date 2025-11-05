@@ -8,6 +8,10 @@ import {
   CollectionReference,
   DocumentReference,
   SetOptions,
+  doc,
+  Firestore,
+  WithFieldValue,
+  DocumentData,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import {FirestorePermissionError} from '@/firebase/errors';
@@ -16,13 +20,13 @@ import {FirestorePermissionError} from '@/firebase/errors';
  * Initiates a setDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
-export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
+export function setDocumentNonBlocking<T>(docRef: DocumentReference<T>, data: WithFieldValue<T>, options: SetOptions) {
   setDoc(docRef, data, options).catch(error => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
         path: docRef.path,
-        operation: 'write', // or 'create'/'update' based on options
+        operation: options.merge ? 'update' : 'write', 
         requestResourceData: data,
       })
     )

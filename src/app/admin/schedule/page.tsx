@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleDayCard } from '@/components/admin/ScheduleDayCard';
 import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, DocumentReference } from 'firebase/firestore';
 
 const dayNames: Record<keyof Omit<ScheduleConfiguration, 'id'>, string> = {
   monday: 'Lunes',
@@ -38,7 +38,7 @@ export default function SchedulePage() {
   const firestore = useFirestore();
 
   const scheduleRef = useMemoFirebase(() => 
-    firestore ? doc(firestore, 'scheduleConfigurations', 'main_schedule') : null
+    firestore ? doc(firestore, 'scheduleConfigurations', 'main_schedule') as DocumentReference<ScheduleConfiguration> : null
   , [firestore]);
 
   const { data: scheduleConfig, isLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
