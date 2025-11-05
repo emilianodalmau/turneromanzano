@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useTransition, useEffect, useMemo } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { z } from 'zod';
-import { collectionGroup, doc, collection, query, where } from 'firebase/firestore';
+import { collectionGroup, doc, collection } from 'firebase/firestore';
 
 import { Appointment } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 import {
@@ -64,8 +64,14 @@ const appointmentFormSchema = z.object({
 type AppointmentFormValues = z.infer<typeof appointmentFormSchema>;
 
 export function AppointmentDataTable() {
+  const { user } = useUser();
   const firestore = useFirestore();
-  const appointmentsQuery = useMemoFirebase(() => collectionGroup(firestore, 'appointments'), [firestore]);
+  // Only create the query if the user is logged in
+  const appointmentsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collectionGroup(firestore, 'appointments');
+  }, [firestore, user]);
+  
   const { data: appointments, isLoading } = useCollection<Appointment>(appointmentsQuery);
 
   const [isPending, startTransition] = useTransition();
