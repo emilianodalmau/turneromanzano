@@ -168,7 +168,7 @@ export async function updateScheduleConfigurationAction(newSchedule: ScheduleCon
     const { firestore } = initializeServerFirebase();
     const scheduleRef = doc(firestore, 'scheduleConfigurations', 'main_schedule');
     try {
-      await setDoc(scheduleRef, newSchedule, { merge: true });
+      await setDoc(scheduleRef, newSchedule);
       revalidatePath('/admin/schedule');
       revalidatePath('/book'); // So clients get new slots
       return { success: true };
