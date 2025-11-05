@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { z } from 'zod';
 
 import { Appointment } from '@/lib/types';
-import { createAppointment, deleteAppointment, updateAppointment } from '@/lib/actions';
+import { createAppointment, deleteAppointment, updateAppointment, getAppointments } from '@/lib/actions';
 import {
   Table,
   TableBody,
@@ -47,12 +48,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
-type AppointmentFormValues = Omit<Appointment, 'id' | 'createdAt'>;
+type AppointmentFormValues = z.infer<typeof appointmentFormSchema>;
 
-const appointmentFormSchema = zodResolver(
-  // Basic validation, can be extended
-  // This is a simplified version, not from types.ts to include date/time
-  zod.object({
+const appointmentFormSchema = z.object({
     name: z.string().min(1, 'Nombre es requerido'),
     lastName: z.string().min(1, 'Apellido es requerido'),
     dni: z.string().min(7, 'DNI es requerido'),
@@ -60,11 +58,11 @@ const appointmentFormSchema = zodResolver(
     email: z.string().email('Email inválido'),
     date: z.string().min(1, 'Fecha es requerida'),
     time: z.string().min(1, 'Hora es requerida'),
-  })
-);
+});
 
 export function AppointmentDataTable({ initialData }: { initialData: Appointment[] }) {
   const [data, setData] = useState(initialData);
+  const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [isFormOpen, setFormOpen] = useState(false);
   const [isAlertOpen, setAlertOpen] = useState(false);
@@ -73,21 +71,23 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
   const { toast } = useToast();
 
   const form = useForm<AppointmentFormValues>({
-    resolver: appointmentFormSchema,
-    defaultValues: {
-      name: '',
-      lastName: '',
-      dni: '',
-      phone: '',
-      email: '',
-      date: '',
-      time: '',
-    },
+    resolver: zodResolver(appointmentFormSchema),
+    defaultValues: { name: '', lastName: '', dni: '', phone: '', email: '', date: '', time: '' },
   });
+
+  useEffect(() => {
+    getAppointments().then(appointments => {
+      setData(appointments);
+      setIsLoading(false);
+    })
+  }, []);
 
   const handleEdit = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
-    form.reset(appointment);
+    form.reset({
+      ...appointment,
+      date: format(new Date(appointment.date), 'yyyy-MM-dd') // Ensure date is in correct format for input
+    });
     setFormOpen(true);
   };
   
@@ -122,7 +122,7 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
           toast({ title: 'Turno actualizado' });
         } else {
           const created = await createAppointment(values);
-          setData([created, ...data]);
+          setData([created, ...data].sort((a,b) => new Date(`${b.date}T${b.time}`).getTime() - new Date(`${a.date}T${a.time}`).getTime()));
           toast({ title: 'Turno creado' });
         }
         setFormOpen(false);
@@ -152,7 +152,13 @@ export function AppointmentDataTable({ initialData }: { initialData: Appointment
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.length > 0 ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                </TableCell>
+              </TableRow>
+            ) : data.length > 0 ? (
               data.map((appointment) => (
                 <TableRow key={appointment.id}>
                   <TableCell>

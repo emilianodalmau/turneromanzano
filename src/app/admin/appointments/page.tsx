@@ -2,7 +2,8 @@ import { getAppointments } from "@/lib/actions";
 import { AppointmentDataTable } from "./data-table";
 
 export default async function AppointmentsPage() {
-  const appointments = await getAppointments();
+  // Initial data is fetched here, but the data-table will re-fetch on client-side
+  const initialAppointments = await getAppointments();
 
   return (
     <div className="space-y-6">
@@ -14,7 +15,7 @@ export default async function AppointmentsPage() {
           Vea, cree, edite y elimine los turnos de los visitantes.
         </p>
       </div>
-      <AppointmentDataTable initialData={appointments} />
+      <AppointmentDataTable initialData={initialAppointments} />
     </div>
   );
 }
