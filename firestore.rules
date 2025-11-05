@@ -2,25 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Allow any authenticated user (admin) full access to user profiles.
-    match /users/{userId} {
-      allow read, write, create, update, delete: if request.auth != null;
-    }
-
-    // Allow any authenticated user (admin) full access to appointments.
-    match /users/{userId}/appointments/{appointmentId} {
-      allow read, write, create, update, delete: if request.auth != null;
-    }
-
-    // Allow collection group queries on appointments for authenticated users.
-    match /{path=**}/appointments/{appointmentId} {
-       allow get, list: if request.auth != null;
-    }
-
-    // Allow any authenticated user (admin) to manage schedule configurations.
-    match /scheduleConfigurations/{docId} {
-      allow read, write, create, update, delete: if request.auth != null;
+    // Regla temporal: Permite la lectura y escritura en todos los documentos
+    // a cualquier cliente, autenticado o no.
+    // ¡ADVERTENCIA! Esto es inseguro y solo debe usarse para depuración.
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
