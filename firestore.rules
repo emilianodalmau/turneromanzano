@@ -3,12 +3,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can read their own profile.
-    // They can create their profile only if the doc id matches their uid.
-    // They can update/delete their profile.
+    // Users can read, update, or delete their own profile.
+    // Admins (any authenticated user in this demo) can create new users.
     match /users/{userId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
+      // Allow any authenticated user (admin) to create user profiles.
+      allow create: if request.auth != null;
     }
 
     // A user can manage their own appointments.
