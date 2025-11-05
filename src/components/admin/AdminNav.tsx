@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
 import {
   SidebarContent,
   SidebarHeader,
@@ -9,9 +10,10 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { CalendarDays, Settings, Sparkles, Home } from "lucide-react";
+import { CalendarDays, Settings, Sparkles, Home, LogOut } from "lucide-react";
 import Logo from "../Logo";
 import Link from "next/link";
+import { useAuth } from "@/firebase";
 
 const menuItems = [
   {
@@ -36,6 +38,13 @@ const menuItems = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/admin');
+  };
 
   return (
     <>
@@ -65,6 +74,12 @@ export default function AdminNav() {
                   <Home />
                   <span>Sitio Público</span>
                 </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleLogout} tooltip={{ children: 'Cerrar Sesión' }}>
+                <LogOut />
+                <span>Cerrar Sesión</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>
