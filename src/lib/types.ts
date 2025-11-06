@@ -27,3 +27,16 @@ export interface ScheduleConfiguration {
     [key in DayKey]: DayConfiguration;
   };
 }
+
+export interface Appointment {
+  id: string;
+  userId: string;
+  date: string; // Stored as 'yyyy-MM-dd'
+  startTime: string;
+  endTime: string;
+  responsibleName: string;
+  schoolName: string;
+  visitorCount: number;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: string;
+}

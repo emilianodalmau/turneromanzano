@@ -57,8 +57,8 @@
         },
         "date": {
           "type": "string",
-          "description": "The date of the appointment.",
-          "format": "date-time"
+          "description": "The date of the appointment in YYYY-MM-DD format.",
+          "format": "date"
         },
         "startTime": {
           "type": "string",
@@ -67,6 +67,28 @@
         "endTime": {
           "type": "string",
           "description": "The end time of the appointment."
+        },
+        "responsibleName": {
+            "type": "string",
+            "description": "Name of the person responsible for the group."
+        },
+        "schoolName": {
+            "type": "string",
+            "description": "Name of the school or institution visiting."
+        },
+        "visitorCount": {
+            "type": "number",
+            "description": "Number of people in the visiting group."
+        },
+        "status": {
+            "type": "string",
+            "description": "The status of the appointment.",
+            "enum": ["pending", "confirmed", "cancelled"]
+        },
+        "createdAt": {
+            "type": "string",
+            "description": "The timestamp when the appointment was created.",
+            "format": "date-time"
         }
       },
       "required": [
@@ -74,7 +96,12 @@
         "userId",
         "date",
         "startTime",
-        "endTime"
+        "endTime",
+        "responsibleName",
+        "schoolName",
+        "visitorCount",
+        "status",
+        "createdAt"
       ]
     },
     "ScheduleConfiguration": {
@@ -83,29 +110,42 @@
       "type": "object",
       "description": "Represents the configuration for available appointment days and times.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the schedule configuration."
-        },
-        "dayOfWeek": {
-          "type": "string",
-          "description": "The day of the week for the configuration (e.g., Monday, Tuesday)."
-        },
-        "startTime": {
-          "type": "string",
-          "description": "The start time for available appointments on this day."
-        },
-        "endTime": {
-          "type": "string",
-          "description": "The end time for available appointments on this day."
+        "days": {
+          "type": "object",
+          "properties": {
+            "monday": {"$ref": "#/entities/DayConfiguration"},
+            "tuesday": {"$ref": "#/entities/DayConfiguration"},
+            "wednesday": {"$ref": "#/entities/DayConfiguration"},
+            "thursday": {"$ref": "#/entities/DayConfiguration"},
+            "friday": {"$ref": "#/entities/DayConfiguration"},
+            "saturday": {"$ref": "#/entities/DayConfiguration"},
+            "sunday": {"$ref": "#/entities/DayConfiguration"}
+          }
         }
       },
-      "required": [
-        "id",
-        "dayOfWeek",
-        "startTime",
-        "endTime"
-      ]
+      "required": ["days"]
+    },
+    "DayConfiguration": {
+        "title": "DayConfiguration",
+        "type": "object",
+        "properties": {
+            "enabled": { "type": "boolean" },
+            "slots": {
+                "type": "array",
+                "items": { "$ref": "#/entities/TimeSlot" }
+            }
+        },
+        "required": ["enabled", "slots"]
+    },
+    "TimeSlot": {
+        "title": "TimeSlot",
+        "type": "object",
+        "properties": {
+            "startTime": { "type": "string" },
+            "endTime": { "type": "string" },
+            "capacity": { "type": "number" }
+        },
+        "required": ["startTime", "endTime", "capacity"]
     }
   },
   "auth": {
@@ -132,18 +172,14 @@
         }
       },
       {
-        "path": "/users/{userId}/appointments/{appointmentId}",
+        "path": "/appointments/{appointmentId}",
         "definition": {
           "entityName": "Appointment",
           "schema": {
             "$ref": "#/backend/entities/Appointment"
           },
-          "description": "Stores appointments associated with a specific user.  Path-based ownership (user ID in the path) ensures that only the user can access their appointments.",
+          "description": "Stores all appointments from all users. This allows admins to query all appointments easily.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
             {
               "name": "appointmentId",
               "description": "The unique identifier of the appointment."
@@ -168,6 +204,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, Clarity of Intent, and support secure list operations (QAPs). It leverages path-based ownership for user data and schedule configurations, while appointments are structured under the respective user to ensure clear ownership and simplified security rules. \n\nAuthorization Independence:\n\n*   The `/users/{userId}/appointments/{appointmentId}` path establishes a clear ownership model where appointments are directly associated with users, eliminating the need to `get()` data from other collections to validate ownership.\n\nQAPs Support:\n\n*   The segregation of user-owned data under `/users/{userId}` allows for efficient and secure `list` operations scoped to individual users, without exposing data from other users. Schedule configurations are global, so rules can enforce only admin writes."
+    "reasoning": "The Firestore structure is designed for clarity and security. User data is separated. Appointments are stored in a top-level collection to allow for easy querying by administrators, while public users can write to it. Schedule configurations are global and should be write-restricted to admins."
   }
 }
