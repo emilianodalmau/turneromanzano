@@ -24,7 +24,7 @@ import {
 import { Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect, useMemo } from 'react';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, useFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { ScheduleConfiguration, dayNames } from '@/lib/types';
 
@@ -67,11 +67,11 @@ const defaultConfig: FormValues = {
 
 export default function ScheduleConfigPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
+  const { firestore, areServicesAvailable } = useFirebase();
 
   const scheduleRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
-    [firestore]
+    () => (areServicesAvailable ? doc(firestore, 'scheduleConfigurations', 'default') : null),
+    [firestore, areServicesAvailable]
   );
 
   const { data: scheduleConfig, isLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
@@ -81,28 +81,29 @@ export default function ScheduleConfigPage() {
     defaultValues: defaultConfig,
   });
 
-  useEffect(() => {
+   useEffect(() => {
+    if (!isLoading && !scheduleConfig && scheduleRef) {
+       setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
+    }
     if (scheduleConfig) {
       form.reset({ days: scheduleConfig.days });
     }
-  }, [scheduleConfig, form]);
+  }, [scheduleConfig, isLoading, form, scheduleRef]);
 
-  const { fields, control } = form;
 
-  const dayFields = Object.keys(dayNames).map(
-    (day) =>
-      ({
-        ...useFieldArray({
-          control,
-          name: `days.${day}.slots`,
-        }),
-        day,
-      })
-  );
+  const dayFieldArrays = useMemo(() => {
+    return Object.keys(dayNames).map((day) => ({
+      ...useFieldArray({
+        control: form.control,
+        name: `days.${day}.slots`,
+      }),
+      day,
+    }));
+  }, [form.control]);
 
   function onSubmit(data: FormValues) {
     if (!scheduleRef) return;
-    setDocumentNonBlocking(scheduleRef, data);
+    setDocumentNonBlocking(scheduleRef, data, { merge: false });
     toast({
       title: 'Horarios actualizados',
       description: 'La configuración de la agenda ha sido guardada correctamente.',
@@ -122,37 +123,36 @@ export default function ScheduleConfigPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <Accordion type="multiple" className="w-full">
-              {Object.entries(dayNames).map(([dayKey, dayName], index) => {
-                const dayFieldArray = dayFields.find(df => df.day === dayKey)!;
+              {Object.entries(dayNames).map(([dayKey, dayName]) => {
+                const dayFieldArray = dayFieldArrays.find(df => df.day === dayKey)!;
                 const isDayEnabled = form.watch(`days.${dayKey}.enabled`);
 
                 return (
                   <AccordionItem value={dayKey} key={dayKey}>
-                    <AccordionTrigger>
-                      <div className="flex items-center gap-4">
-                        <FormField
-                          control={form.control}
-                          name={`days.${dayKey}.enabled`}
-                          render={({ field }) => (
-                            <FormItem className="flex items-center space-x-2">
-                               <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={(checked) => {
-                                    field.onChange(checked);
-                                    if(!checked) {
-                                      dayFieldArray.replace([]);
-                                    }
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                               </FormControl>
-                               <FormLabel className='text-lg'>{dayName}</FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </AccordionTrigger>
+                    <div className="flex items-center w-full">
+                      <FormField
+                        control={form.control}
+                        name={`days.${dayKey}.enabled`}
+                        render={({ field }) => (
+                          <FormItem className="flex items-center space-x-2 p-4">
+                             <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={(checked) => {
+                                  field.onChange(checked);
+                                  if(!checked) {
+                                    dayFieldArray.replace([]);
+                                  }
+                                }}
+                              />
+                             </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <AccordionTrigger>
+                          <FormLabel className='text-lg'>{dayName}</FormLabel>
+                      </AccordionTrigger>
+                    </div>
                     <AccordionContent className="pl-4 border-l ml-4">
                       {isDayEnabled ? (
                       <div className="space-y-4 pt-4">
