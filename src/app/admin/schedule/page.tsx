@@ -35,10 +35,8 @@ const defaultConfig: ScheduleConfiguration = {
 export default function SchedulePage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  // Use the full firebase hook to check for service availability
   const { firestore, areServicesAvailable } = useFirebase();
 
-  // Only create the document reference if firebase services are available
   const scheduleRef = useMemoFirebase(() => 
     areServicesAvailable && firestore 
       ? doc(firestore, 'scheduleConfigurations', 'main_schedule') as DocumentReference<ScheduleConfiguration> 
@@ -52,16 +50,10 @@ export default function SchedulePage() {
   });
 
   useEffect(() => {
-    // If the data from Firestore is loaded, reset the form with it.
     if (scheduleConfig) {
       form.reset(scheduleConfig);
-    } 
-    // This is the critical part: only create the default config if...
-    // 1. The hook has finished loading.
-    // 2. The hook has explicitly returned `null` (meaning the doc doesn't exist).
-    // 3. We have a valid firestore instance and a document reference.
-    else if (!isLoading && scheduleConfig === null && firestore && scheduleRef) {
-      setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
+    } else if (!isLoading && scheduleConfig === null && firestore && scheduleRef) {
+      setDocumentNonBlocking(scheduleRef, defaultConfig);
     }
   }, [scheduleConfig, isLoading, form, firestore, scheduleRef]);
   
@@ -69,14 +61,12 @@ export default function SchedulePage() {
     if (!firestore || !scheduleRef) return;
     
     startTransition(() => {
-      // Pass the entire form data and specify merge:false to overwrite.
-      setDocumentNonBlocking(scheduleRef, data, { merge: false });
+      setDocumentNonBlocking(scheduleRef, data);
       toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
     });
   };
 
-  // Show a loader if Firebase is initializing OR if we are fetching the document.
-  if (!areServicesAvailable || (isLoading && !scheduleConfig)) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
