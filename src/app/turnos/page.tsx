@@ -35,7 +35,6 @@ import type { ScheduleConfiguration, DayKey, TimeSlot } from '@/lib/types';
 import type { Appointment } from '@/lib/types';
 
 const formSchema = z.object({
-  responsibleName: z.string().min(1, 'El nombre del responsable es requerido.'),
   name: z.string().min(1, 'El nombre es requerido.'),
   lastName: z.string().min(1, 'El apellido es requerido.'),
   email: z.string().email('Correo electrónico no válido.'),
@@ -71,7 +70,6 @@ export default function TurnosPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      responsibleName: '',
       name: '',
       lastName: '',
       email: '',
@@ -138,7 +136,7 @@ export default function TurnosPage() {
             date: format(data.appointmentDate, 'yyyy-MM-dd'),
             startTime: data.appointmentSlot.split(' - ')[0],
             endTime: data.appointmentSlot.split(' - ')[1].split(' (')[0],
-            responsibleName: data.responsibleName,
+            responsibleName: `${data.name} ${data.lastName}`,
             schoolName: data.schoolName,
             visitorCount: data.visitorCount,
             status: 'pending',
@@ -228,32 +226,6 @@ export default function TurnosPage() {
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium">Datos del Responsable</h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                         <FormField
-                            control={form.control}
-                            name="responsibleName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nombre completo del responsable</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Juan Pérez" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="dni"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>DNI del responsable</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: 30123456" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
                         <FormField
                             control={form.control}
                             name="name"
@@ -275,6 +247,19 @@ export default function TurnosPage() {
                                 <FormLabel>Apellido</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Ej: Pérez" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="dni"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>DNI del responsable</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ej: 30123456" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
