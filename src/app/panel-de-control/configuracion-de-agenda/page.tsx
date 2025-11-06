@@ -196,9 +196,7 @@ export default function ScheduleConfigPage() {
   });
 
   useEffect(() => {
-    // Solo se ejecuta si los servicios están listos, la carga del doc ha terminado,
-    // el doc no existe, y la referencia es válida.
-    if (!isDocLoading && areServicesAvailable && scheduleConfig === null && scheduleRef) {
+    if (areServicesAvailable && !isDocLoading && scheduleConfig === null && scheduleRef) {
         setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
     }
     if (scheduleConfig) {
@@ -216,8 +214,6 @@ export default function ScheduleConfigPage() {
     });
   }
 
-  // Muestra el estado de carga si los servicios de Firebase no están listos,
-  // la autenticación del usuario está en curso, o el documento se está cargando.
   if (!areServicesAvailable || isUserLoading || isDocLoading) {
     return <p>Cargando configuración...</p>
   }
