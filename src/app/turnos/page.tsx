@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Link from 'next/link';
 
 // Schema de validación con el campo de fecha y hora
 const formSchema = z.object({
@@ -363,7 +364,12 @@ export default function TurnosPage() {
                     </div>
                 </div>
 
-              <Button type="submit" className="w-full">Enviar Solicitud</Button>
+                <div className="flex flex-col md:flex-row gap-4">
+                    <Button type="submit" className="w-full">Enviar Solicitud</Button>
+                    <Link href="/" passHref className="w-full">
+                        <Button variant="outline" className="w-full">Cancelar</Button>
+                    </Link>
+                </div>
             </form>
           </Form>
         </CardContent>
