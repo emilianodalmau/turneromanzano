@@ -84,7 +84,7 @@ export default function TurnosPage() {
   const visitorCount = form.watch('visitorCount');
 
   useEffect(() => {
-    // Solo calcular si TODAS las dependencias clave están disponibles.
+    // Only calculate if ALL key dependencies are available.
     if (selectedDate && scheduleConfig && allAppointments) {
       const dayKey = format(selectedDate, 'EEEE', { locale: es }).toLowerCase() as DayKey;
       const dayConfig = scheduleConfig.days[dayKey];
@@ -116,7 +116,7 @@ export default function TurnosPage() {
       setAvailableSlots(slotsWithCapacity);
       form.setValue('appointmentSlot', '');
     } else {
-      // Si falta alguna dependencia, la lista de slots debe estar vacía.
+      // If any dependency is missing, the slot list should be empty.
       setAvailableSlots([]);
     }
   }, [selectedDate, visitorCount, scheduleConfig, allAppointments, form]);
@@ -323,7 +323,7 @@ export default function TurnosPage() {
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         disabled={(date) => {
-                                            if (isScheduleLoading) return true;
+                                            if (isScheduleLoading) return false;
                                             const dayKey = format(date, 'EEEE', { locale: es }).toLowerCase() as DayKey;
                                             const dayIsEnabled = scheduleConfig?.days[dayKey]?.enabled ?? false;
                                             return date < new Date(new Date().setHours(0,0,0,0)) || !dayIsEnabled;
