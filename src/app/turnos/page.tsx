@@ -139,7 +139,7 @@ export default function TurnosPage() {
             responsibleName: `${data.name} ${data.lastName}`,
             schoolName: data.schoolName,
             visitorCount: data.visitorCount,
-            status: 'pending',
+            status: 'pending' as 'pending',
             createdAt: new Date().toISOString(),
         };
 
