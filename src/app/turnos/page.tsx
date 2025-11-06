@@ -15,10 +15,17 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
+import { ScheduleConfiguration, DayKey } from '@/lib/types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-// Schema de validación sin campos de fecha y hora
+// Schema de validación con el campo de fecha
 const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   lastName: z.string().min(1, 'El apellido es requerido.'),
@@ -27,6 +34,9 @@ const formSchema = z.object({
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
+  date: z.date({
+    required_error: 'Se requiere una fecha para la visita.',
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -34,6 +44,13 @@ type FormValues = z.infer<typeof formSchema>;
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  const scheduleRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
+    [firestore]
+  );
+  
+  const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -58,11 +75,10 @@ export default function TurnosPage() {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
 
-        // Se crea la solicitud de turno sin fecha ni hora específica
         const newAppointmentRequest = {
             userId: userId,
-            date: '', // Se deja vacío
-            startTime: '', // Se deja vacío
+            date: format(data.date, 'yyyy-MM-dd'),
+            startTime: '', // Se deja vacío ya que no hay selector de hora
             endTime: '', // Se deja vacío
             responsibleName: `${data.name} ${data.lastName}`,
             schoolName: data.schoolName,
@@ -89,7 +105,7 @@ export default function TurnosPage() {
 
         toast({
             title: 'Solicitud de Turno Enviada',
-            description: 'Hemos recibido tu solicitud. Nos pondremos en contacto para confirmar la fecha y hora.',
+            description: 'Hemos recibido tu solicitud. Nos pondremos en contacto para confirmar la visita.',
         });
         form.reset();
     } catch (error) {
@@ -102,6 +118,8 @@ export default function TurnosPage() {
     }
 }
 
+  const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <Card className="max-w-4xl mx-auto">
@@ -113,7 +131,7 @@ export default function TurnosPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Datos de la Institución</h3>
+                    <h3 className="text-lg font-medium">Datos de la Visita</h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
@@ -141,6 +159,58 @@ export default function TurnosPage() {
                                 </FormItem>
                             )}
                         />
+                        <FormField
+                            control={form.control}
+                            name="date"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                <FormLabel>Fecha de la visita</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full pl-3 text-left font-normal",
+                                            !field.value && "text-muted-foreground"
+                                        )}
+                                        >
+                                        {field.value ? (
+                                            format(field.value, "PPP", { locale: es })
+                                        ) : (
+                                            <span>Selecciona una fecha</span>
+                                        )}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={field.value}
+                                        onSelect={field.onChange}
+                                        disabled={(date) => {
+                                            if (isScheduleLoading) return false; // Don't disable while loading
+                                            
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+                                            if (date < today) return true;
+
+                                            const dayKey = dayNamesInEnglish[date.getDay()];
+                                            if (!scheduleConfig?.days[dayKey]?.enabled) {
+                                                return true;
+                                            }
+                                            
+                                            return false;
+                                        }}
+                                        initialFocus
+                                    />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
                     </div>
                 </div>
 
