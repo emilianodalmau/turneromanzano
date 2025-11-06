@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScheduleDayCard } from '@/components/admin/ScheduleDayCard';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, DocumentReference } from 'firebase/firestore';
 
 const dayNames: Record<keyof Omit<ScheduleConfiguration, 'id'>, string> = {
@@ -35,11 +35,15 @@ const defaultConfig: ScheduleConfiguration = {
 export default function SchedulePage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const firestore = useFirestore();
+  // Use the full firebase hook to check for service availability
+  const { firestore, areServicesAvailable } = useFirebase();
 
+  // Only create the document reference if firebase services are available
   const scheduleRef = useMemoFirebase(() => 
-    firestore ? doc(firestore, 'scheduleConfigurations', 'main_schedule') as DocumentReference<ScheduleConfiguration> : null
-  , [firestore]);
+    areServicesAvailable && firestore 
+      ? doc(firestore, 'scheduleConfigurations', 'main_schedule') as DocumentReference<ScheduleConfiguration> 
+      : null
+  , [firestore, areServicesAvailable]);
 
   const { data: scheduleConfig, isLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
 
@@ -53,7 +57,7 @@ export default function SchedulePage() {
       form.reset(scheduleConfig);
     } 
     // This is the critical part: only create the default config if...
-    // 1. The loading has finished.
+    // 1. The hook has finished loading.
     // 2. The hook has explicitly returned `null` (meaning the doc doesn't exist).
     // 3. We have a valid firestore instance and a document reference.
     else if (!isLoading && scheduleConfig === null && firestore && scheduleRef) {
@@ -65,13 +69,14 @@ export default function SchedulePage() {
     if (!firestore || !scheduleRef) return;
     
     startTransition(() => {
-      // Use the non-blocking update to save the entire form data, replacing the old one.
+      // Pass the entire form data and specify merge:false to overwrite.
       setDocumentNonBlocking(scheduleRef, data, { merge: false });
       toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
     });
   };
 
-  if (isLoading && !scheduleConfig) { // Show loader only on initial load
+  // Show a loader if Firebase is initializing OR if we are fetching the document.
+  if (!areServicesAvailable || (isLoading && !scheduleConfig)) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
