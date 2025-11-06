@@ -15,25 +15,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { useEffect, useState } from 'react';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import type { ScheduleConfiguration, DayKey, TimeSlot } from '@/lib/types';
-import type { Appointment } from '@/lib/types';
 
+// Schema de validación sin campos de fecha y hora
 const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   lastName: z.string().min(1, 'El apellido es requerido.'),
@@ -42,30 +27,13 @@ const formSchema = z.object({
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
-  appointmentDate: z.date({ required_error: 'Debes seleccionar una fecha.' }),
-  appointmentSlot: z.string({ required_error: 'Debes seleccionar un horario.' }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface AvailableSlot extends TimeSlot {
-  display: string;
-}
-
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
-
-  const scheduleRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
-    [firestore]
-  );
-  const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
-
-  const appointmentsRef = useMemoFirebase(() => (firestore ? collection(firestore, 'appointments') : null), [firestore]);
-  const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsRef);
-
-  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -80,47 +48,6 @@ export default function TurnosPage() {
     },
   });
 
-  const selectedDate = form.watch('appointmentDate');
-  const visitorCount = form.watch('visitorCount');
-
-  useEffect(() => {
-    // Only calculate if ALL key dependencies are available.
-    if (selectedDate && scheduleConfig && allAppointments) {
-      const dayKey = format(selectedDate, 'EEEE', { locale: es }).toLowerCase() as DayKey;
-      const dayConfig = scheduleConfig.days[dayKey];
-
-      if (!dayConfig || !dayConfig.enabled) {
-        setAvailableSlots([]);
-        return;
-      }
-
-      const appointmentsOnDate = allAppointments.filter(
-        (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
-      );
-
-      const slotsWithCapacity = dayConfig.slots
-        .map((slot) => {
-          const visitorsInSlot = appointmentsOnDate
-            .filter((app) => app.startTime === slot.startTime)
-            .reduce((total, app) => total + app.visitorCount, 0);
-          
-          const remainingCapacity = slot.capacity - visitorsInSlot;
-          return { ...slot, remainingCapacity };
-        })
-        .filter((slot) => slot.remainingCapacity >= visitorCount)
-        .map((slot) => ({
-          ...slot,
-          display: `${slot.startTime} - ${slot.endTime} (Capacidad restante: ${slot.remainingCapacity})`,
-        }));
-        
-      setAvailableSlots(slotsWithCapacity);
-      form.setValue('appointmentSlot', '');
-    } else {
-      // If any dependency is missing, the slot list should be empty.
-      setAvailableSlots([]);
-    }
-  }, [selectedDate, visitorCount, scheduleConfig, allAppointments, form]);
-  
   async function onSubmit(data: FormValues) {
     if (!firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar a la base de datos.' });
@@ -131,11 +58,12 @@ export default function TurnosPage() {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
 
-        const newAppointment = {
+        // Se crea la solicitud de turno sin fecha ni hora específica
+        const newAppointmentRequest = {
             userId: userId,
-            date: format(data.appointmentDate, 'yyyy-MM-dd'),
-            startTime: data.appointmentSlot.split(' - ')[0],
-            endTime: data.appointmentSlot.split(' - ')[1].split(' (')[0],
+            date: '', // Se deja vacío
+            startTime: '', // Se deja vacío
+            endTime: '', // Se deja vacío
             responsibleName: `${data.name} ${data.lastName}`,
             schoolName: data.schoolName,
             visitorCount: data.visitorCount,
@@ -144,7 +72,7 @@ export default function TurnosPage() {
         };
 
         const appointmentsCollection = collection(firestore, 'appointments');
-        const appointmentDocRef = await addDocumentNonBlocking(appointmentsCollection, newAppointment);
+        const appointmentDocRef = await addDocumentNonBlocking(appointmentsCollection, newAppointmentRequest);
         
         const userProfile = {
             id: userId,
@@ -160,28 +88,26 @@ export default function TurnosPage() {
         }
 
         toast({
-            title: 'Turno Reservado',
-            description: 'Tu turno ha sido registrado. Recibirás una confirmación por correo electrónico.',
+            title: 'Solicitud de Turno Enviada',
+            description: 'Hemos recibido tu solicitud. Nos pondremos en contacto para confirmar la fecha y hora.',
         });
         form.reset();
     } catch (error) {
-        console.error('Error al guardar el turno:', error);
+        console.error('Error al guardar la solicitud de turno:', error);
         toast({
             variant: 'destructive',
             title: 'Error',
-            description: 'No se pudo guardar el turno. Por favor, inténtalo de nuevo.',
+            description: 'No se pudo enviar la solicitud. Por favor, inténtalo de nuevo.',
         });
     }
 }
-
-  const isDataLoading = isScheduleLoading || areAppointmentsLoading;
 
   return (
     <div className="container mx-auto p-4 md:p-8">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-3xl">Reserva de Turno para Visitas</CardTitle>
-          <CardDescription>Completa el formulario para solicitar un turno de visita.</CardDescription>
+          <CardTitle className="text-3xl">Solicitud de Turno para Visitas</CardTitle>
+          <CardDescription>Completa tus datos y nos pondremos en contacto para coordinar la visita.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -289,91 +215,7 @@ export default function TurnosPage() {
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Selección de Turno</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name="appointmentDate"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Fecha de la visita</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "w-full pl-3 text-left font-normal",
-                                            !field.value && "text-muted-foreground"
-                                        )}
-                                        >
-                                        {field.value ? (
-                                            format(field.value, "PPP", { locale: es })
-                                        ) : (
-                                            <span>Selecciona una fecha</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) => {
-                                            if (isScheduleLoading) return false;
-                                            const dayKey = format(date, 'EEEE', { locale: es }).toLowerCase() as DayKey;
-                                            const dayIsEnabled = scheduleConfig?.days[dayKey]?.enabled ?? false;
-                                            return date < new Date(new Date().setHours(0,0,0,0)) || !dayIsEnabled;
-                                        }}
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="appointmentSlot"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Horario disponible</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={
-                                            areAppointmentsLoading ? "Calculando horarios..." :
-                                            !selectedDate ? "Selecciona una fecha primero" : 
-                                            availableSlots.length > 0 ? "Selecciona un horario" : "No hay horarios disponibles"
-                                        } />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {availableSlots.length > 0 ? (
-                                            availableSlots.map((slot) => (
-                                            <SelectItem key={slot.startTime} value={`${slot.startTime} - ${slot.endTime}`}>
-                                                {slot.display}
-                                            </SelectItem>
-                                            ))
-                                        ) : (
-                                            <SelectItem value="no-slots" disabled>
-                                                No hay horarios disponibles para esta fecha o cantidad de personas.
-                                            </SelectItem>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                </div>
-
-              <Button type="submit" className="w-full" disabled={isDataLoading}>Reservar Turno</Button>
+              <Button type="submit" className="w-full">Enviar Solicitud</Button>
             </form>
           </Form>
         </CardContent>
