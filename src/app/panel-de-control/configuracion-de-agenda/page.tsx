@@ -196,15 +196,17 @@ export default function ScheduleConfigPage() {
   });
 
   useEffect(() => {
-    // Only proceed when loading is finished.
-    if (isDocLoading) return;
-  
+    // Wait until the document loading is complete before doing anything.
+    if (isDocLoading) {
+      return;
+    }
+
     // If data exists in Firestore, reset the form with it.
     if (scheduleConfig) {
       form.reset({ days: scheduleConfig.days });
-    } 
-    // If the data is explicitly null (meaning the document doesn't exist),
-    // create it with default values and reset the form.
+    }
+    // If the data is explicitly null (meaning the document doesn't exist)
+    // and we have a valid reference to write to, create the document.
     else if (scheduleConfig === null && scheduleRef) {
       setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
       form.reset(defaultConfig);
