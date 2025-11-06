@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
 import { Appointment, ScheduleConfiguration, TimeSlot, DayKey, User } from '@/lib/types';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Search, X as XIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -307,10 +307,76 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
     );
 }
 
+type AppointmentWithUser = Appointment & { user?: User };
 
-function AppointmentList({ appointments }: { appointments: Appointment[] }) {
+function AppointmentList({ appointments, users }: { appointments: Appointment[]; users: User[] }) {
     const firestore = useFirestore();
     const { toast } = useToast();
+
+    const appointmentsWithUsers = useMemo(() => {
+        const usersById = new Map(users.map(u => [u.id, u]));
+        return appointments.map(app => ({
+            ...app,
+            user: usersById.get(app.userId),
+        }));
+    }, [appointments, users]);
+
+    const [filters, setFilters] = useState({
+        searchText: '',
+        date: undefined as Date | undefined,
+        paidStatus: 'all', // 'all', 'paid', 'unpaid'
+    });
+
+    const handleFilterChange = (name: keyof typeof filters, value: any) => {
+        setFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const clearFilters = () => {
+        setFilters({
+            searchText: '',
+            date: undefined,
+            paidStatus: 'all',
+        });
+    };
+
+    const filteredAppointments = useMemo(() => {
+        return appointmentsWithUsers.filter(appointment => {
+            // Filter by date
+            if (filters.date && appointment.date !== format(filters.date, 'yyyy-MM-dd')) {
+                return false;
+            }
+
+            // Filter by paid status
+            if (filters.paidStatus === 'paid' && !appointment.paid) {
+                return false;
+            }
+            if (filters.paidStatus === 'unpaid' && appointment.paid) {
+                return false;
+            }
+            
+            // Filter by search text
+            if (filters.searchText) {
+                const searchTerm = filters.searchText.toLowerCase();
+                const responsibleName = appointment.responsibleName.toLowerCase();
+                const schoolName = appointment.schoolName.toLowerCase();
+                const userDni = appointment.user?.dni.toLowerCase() || '';
+                const userEmail = appointment.user?.email.toLowerCase() || '';
+                const userPhone = appointment.user?.phone.toLowerCase() || '';
+
+                if (
+                    !responsibleName.includes(searchTerm) &&
+                    !schoolName.includes(searchTerm) &&
+                    !userDni.includes(searchTerm) &&
+                    !userEmail.includes(searchTerm) &&
+                    !userPhone.includes(searchTerm)
+                ) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+    }, [appointmentsWithUsers, filters]);
 
     const handleDelete = (appointmentId: string) => {
         if (!firestore) return;
@@ -333,7 +399,7 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
     };
 
     const groupedAppointments = useMemo(() => {
-        const sortedAppointments = [...appointments].sort((a, b) => {
+        const sortedAppointments = [...filteredAppointments].sort((a, b) => {
             if (!a.startTime || !b.startTime) return 0;
             return a.startTime.localeCompare(b.startTime)
         });
@@ -347,8 +413,8 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
                 acc[date].push(appointment);
             }
             return acc;
-        }, {} as Record<string, Appointment[]>);
-    }, [appointments]);
+        }, {} as Record<string, AppointmentWithUser[]>);
+    }, [filteredAppointments]);
 
     const getStatusVariant = (status: Appointment['status']) => {
         switch (status) {
@@ -375,16 +441,73 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
                 return 'Desconocido';
         }
     };
-
-    if (!appointments || appointments.length === 0) {
-        return <p>No hay turnos registrados por el momento.</p>;
-    }
-
+    
     const sortedDates = Object.keys(groupedAppointments).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Filtros</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                     <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Buscar por responsable, DNI, institución..."
+                            value={filters.searchText}
+                            onChange={(e) => handleFilterChange('searchText', e.target.value)}
+                            className="pl-10"
+                        />
+                    </div>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "justify-start text-left font-normal",
+                                    !filters.date && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {filters.date ? format(filters.date, "PPP", { locale: es }) : <span>Filtrar por fecha</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={filters.date}
+                                onSelect={(date) => handleFilterChange('date', date)}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+
+                    <Select
+                        value={filters.paidStatus}
+                        onValueChange={(value) => handleFilterChange('paidStatus', value)}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Estado de pago" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los pagos</SelectItem>
+                            <SelectItem value="paid">Pagado</SelectItem>
+                            <SelectItem value="unpaid">No Pagado</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button variant="ghost" onClick={clearFilters} className="flex items-center gap-2">
+                        <XIcon className="h-4 w-4" />
+                        Limpiar Filtros
+                    </Button>
+                </CardContent>
+            </Card>
+            
+            {filteredAppointments.length === 0 && (
+                 <p>No se encontraron turnos que coincidan con los filtros aplicados.</p>
+            )}
+
             {sortedDates.map((date) => (
                 <div key={date}>
                     <h2 className="text-xl font-semibold mb-4 capitalize">
@@ -438,6 +561,9 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
                     </div>
                 </div>
             ))}
+             {appointments.length > 0 && sortedDates.length === 0 && (
+                <p>No hay turnos registrados por el momento.</p>
+            )}
         </div>
     );
 }
@@ -446,17 +572,21 @@ export default function GestionTurnosPage() {
     const firestore = useFirestore();
 
     const appointmentsQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, 'appointments'), orderBy('date', 'desc')) : null),
+        () => (firestore ? query(collection(firestore, 'appointments'), 'date' as any) : null),
         [firestore]
     );
 
-    const { data: appointments, isLoading } = useCollection<Appointment>(appointmentsQuery);
+    const usersQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, 'users') : null),
+        [firestore]
+    );
 
-    if (isLoading) {
+    const { data: appointments, isLoading: isLoadingAppointments } = useCollection<Appointment>(appointmentsQuery);
+    const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
+
+    if (isLoadingAppointments || isLoadingUsers) {
         return <p>Cargando turnos...</p>;
     }
 
-    return <AppointmentList appointments={appointments || []} />;
+    return <AppointmentList appointments={appointments || []} users={users || []} />;
 }
-
-    
