@@ -13,7 +13,11 @@ import { es } from 'date-fns/locale';
 function AppointmentList({ appointments }: { appointments: Appointment[] }) {
     const groupedAppointments = useMemo(() => {
         if (!appointments) return {};
-        return appointments.reduce((acc, appointment) => {
+        
+        // Secondary sort by startTime on the client
+        const sortedAppointments = [...appointments].sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+        return sortedAppointments.reduce((acc, appointment) => {
             const date = appointment.date;
             if (!acc[date]) {
                 acc[date] = [];
@@ -53,15 +57,19 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
         return <p>No hay turnos registrados por el momento.</p>;
     }
 
+    // Get sorted dates
+    const sortedDates = Object.keys(groupedAppointments).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+
     return (
         <div className="space-y-8">
-            {Object.entries(groupedAppointments).map(([date, appointmentsOnDate]) => (
+            {sortedDates.map((date) => (
                 <div key={date}>
                     <h2 className="text-xl font-semibold mb-4 capitalize">
                         {format(parseISO(date + 'T00:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {appointmentsOnDate.map((appointment) => (
+                        {groupedAppointments[date].map((appointment) => (
                             <Card key={appointment.id}>
                                 <CardHeader>
                                     <CardTitle>{`${appointment.startTime} - ${appointment.endTime}`}</CardTitle>
@@ -91,7 +99,7 @@ export default function GestionTurnosPage() {
     const firestore = useFirestore();
 
     const appointmentsQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, 'appointments'), orderBy('date', 'desc'), orderBy('startTime', 'asc')) : null),
+        () => (firestore ? query(collection(firestore, 'appointments'), orderBy('date', 'desc')) : null),
         [firestore]
     );
 
