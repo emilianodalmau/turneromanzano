@@ -15,17 +15,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { ScheduleConfiguration, DayKey } from '@/lib/types';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import { Appointment, ScheduleConfiguration, DayKey, TimeSlot } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useEffect, useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Schema de validación con el campo de fecha
+// Schema de validación con el campo de fecha y hora
 const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   lastName: z.string().min(1, 'El apellido es requerido.'),
@@ -37,6 +39,7 @@ const formSchema = z.object({
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
   }),
+  timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -44,13 +47,20 @@ type FormValues = z.infer<typeof formSchema>;
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
 
   const scheduleRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
     [firestore]
   );
+
+  const appointmentsCollectionRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'appointments') : null),
+    [firestore]
+  );
   
   const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
+  const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsCollectionRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -62,12 +72,55 @@ export default function TurnosPage() {
       dni: '',
       schoolName: '',
       visitorCount: 1,
+      timeSlot: '',
     },
   });
+
+  const selectedDate = form.watch('date');
+  const visitorCount = form.watch('visitorCount');
+
+  useEffect(() => {
+    if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    const dayKey = dayNamesInEnglish[selectedDate.getDay()];
+    const dayConfig = scheduleConfig.days[dayKey];
+
+    if (!dayConfig || !dayConfig.enabled) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    const appointmentsOnSelectedDate = (allAppointments || []).filter(
+      (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
+    );
+
+    const available = dayConfig.slots.filter((slot) => {
+      const visitorsInSlot = appointmentsOnSelectedDate
+        .filter((app) => app.startTime === slot.startTime)
+        .reduce((sum, app) => sum + app.visitorCount, 0);
+      
+      const remainingCapacity = slot.capacity - visitorsInSlot;
+      return remainingCapacity >= visitorCount;
+    });
+
+    setAvailableSlots(available);
+    form.setValue('timeSlot', '');
+
+  }, [selectedDate, visitorCount, scheduleConfig, allAppointments, areAppointmentsLoading, form]);
+
 
   async function onSubmit(data: FormValues) {
     if (!firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar a la base de datos.' });
+        return;
+    }
+
+    const selectedSlot = availableSlots.find(slot => slot.startTime === data.timeSlot);
+    if (!selectedSlot) {
+        toast({ variant: 'destructive', title: 'Error', description: 'El horario seleccionado ya no está disponible.' });
         return;
     }
 
@@ -78,8 +131,8 @@ export default function TurnosPage() {
         const newAppointmentRequest = {
             userId: userId,
             date: format(data.date, 'yyyy-MM-dd'),
-            startTime: '', // Se deja vacío ya que no hay selector de hora
-            endTime: '', // Se deja vacío
+            startTime: selectedSlot.startTime,
+            endTime: selectedSlot.endTime,
             responsibleName: `${data.name} ${data.lastName}`,
             schoolName: data.schoolName,
             visitorCount: data.visitorCount,
@@ -132,7 +185,7 @@ export default function TurnosPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium">Datos de la Visita</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
                             name="schoolName"
@@ -190,8 +243,7 @@ export default function TurnosPage() {
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         disabled={(date) => {
-                                            if (isScheduleLoading) return false; // Don't disable while loading
-                                            
+                                            if (isScheduleLoading) return false;
                                             const today = new Date();
                                             today.setHours(0, 0, 0, 0);
                                             if (date < today) return true;
@@ -211,12 +263,38 @@ export default function TurnosPage() {
                                 </FormItem>
                             )}
                             />
+                        <FormField
+                            control={form.control}
+                            name="timeSlot"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Horario disponible</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecciona un horario" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {availableSlots.map(slot => (
+                                        <SelectItem key={slot.startTime} value={slot.startTime}>
+                                            {`${slot.startTime} - ${slot.endTime}`}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
+                                {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha o cantidad de personas.</p>}
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
                 </div>
 
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium">Datos del Responsable</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
                             name="name"
