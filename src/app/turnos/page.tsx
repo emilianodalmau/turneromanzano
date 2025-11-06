@@ -28,9 +28,9 @@ import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import type { ScheduleConfiguration, DayKey, TimeSlot } from '@/lib/types';
 import type { Appointment } from '@/lib/types';
 
@@ -84,44 +84,41 @@ export default function TurnosPage() {
   const visitorCount = form.watch('visitorCount');
 
   useEffect(() => {
-    // No calcular si falta alguna de las dependencias clave.
-    if (!selectedDate || !scheduleConfig || !allAppointments) {
-      setAvailableSlots([]);
-      return;
-    }
+    // Solo calcular si TODAS las dependencias clave están disponibles.
+    if (selectedDate && scheduleConfig && allAppointments) {
+      const dayKey = format(selectedDate, 'EEEE', { locale: es }).toLowerCase() as DayKey;
+      const dayConfig = scheduleConfig.days[dayKey];
 
-    const dayKey = format(selectedDate, 'EEEE', { locale: es }).toLowerCase() as DayKey;
-    const dayConfig = scheduleConfig.days[dayKey];
+      if (!dayConfig || !dayConfig.enabled) {
+        setAvailableSlots([]);
+        return;
+      }
 
-    if (!dayConfig || !dayConfig.enabled) {
-      setAvailableSlots([]);
-      return;
-    }
+      const appointmentsOnDate = allAppointments.filter(
+        (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
+      );
 
-    // Filtra las citas para la fecha seleccionada
-    const appointmentsOnDate = allAppointments.filter(
-      (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
-    );
-
-    // Calcula la capacidad restante para cada horario
-    const slotsWithCapacity = dayConfig.slots
-      .map((slot) => {
-        const visitorsInSlot = appointmentsOnDate
-          .filter((app) => app.startTime === slot.startTime)
-          .reduce((total, app) => total + app.visitorCount, 0);
+      const slotsWithCapacity = dayConfig.slots
+        .map((slot) => {
+          const visitorsInSlot = appointmentsOnDate
+            .filter((app) => app.startTime === slot.startTime)
+            .reduce((total, app) => total + app.visitorCount, 0);
+          
+          const remainingCapacity = slot.capacity - visitorsInSlot;
+          return { ...slot, remainingCapacity };
+        })
+        .filter((slot) => slot.remainingCapacity >= visitorCount)
+        .map((slot) => ({
+          ...slot,
+          display: `${slot.startTime} - ${slot.endTime} (Capacidad restante: ${slot.remainingCapacity})`,
+        }));
         
-        const remainingCapacity = slot.capacity - visitorsInSlot;
-        return { ...slot, remainingCapacity };
-      })
-      .filter((slot) => slot.remainingCapacity >= visitorCount) // Filtra por la cantidad de visitantes del formulario
-      .map((slot) => ({
-        ...slot,
-        display: `${slot.startTime} - ${slot.endTime} (Capacidad restante: ${slot.remainingCapacity})`,
-      }));
-      
-    setAvailableSlots(slotsWithCapacity);
-    form.setValue('appointmentSlot', '');
-
+      setAvailableSlots(slotsWithCapacity);
+      form.setValue('appointmentSlot', '');
+    } else {
+      // Si falta alguna dependencia, la lista de slots debe estar vacía.
+      setAvailableSlots([]);
+    }
   }, [selectedDate, visitorCount, scheduleConfig, allAppointments, form]);
   
   async function onSubmit(data: FormValues) {
@@ -187,11 +184,6 @@ export default function TurnosPage() {
           <CardDescription>Completa el formulario para solicitar un turno de visita.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isScheduleLoading ? (
-            <div className="flex justify-center items-center h-40">
-                <p>Cargando configuración de turnos...</p>
-            </div>
-          ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-4">
@@ -331,7 +323,7 @@ export default function TurnosPage() {
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         disabled={(date) => {
-                                            if (isScheduleLoading) return true; // Disable all dates while loading
+                                            if (isScheduleLoading) return true;
                                             const dayKey = format(date, 'EEEE', { locale: es }).toLowerCase() as DayKey;
                                             const dayIsEnabled = scheduleConfig?.days[dayKey]?.enabled ?? false;
                                             return date < new Date(new Date().setHours(0,0,0,0)) || !dayIsEnabled;
@@ -356,7 +348,7 @@ export default function TurnosPage() {
                                         <SelectValue placeholder={
                                             areAppointmentsLoading ? "Calculando horarios..." :
                                             !selectedDate ? "Selecciona una fecha primero" : 
-                                            "Selecciona un horario"
+                                            availableSlots.length > 0 ? "Selecciona un horario" : "No hay horarios disponibles"
                                         } />
                                     </SelectTrigger>
                                     </FormControl>
@@ -384,7 +376,6 @@ export default function TurnosPage() {
               <Button type="submit" className="w-full" disabled={isDataLoading}>Reservar Turno</Button>
             </form>
           </Form>
-          )}
         </CardContent>
       </Card>
     </div>
