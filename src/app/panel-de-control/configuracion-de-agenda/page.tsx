@@ -24,7 +24,7 @@ import {
 import { Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEffect } from 'react';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, useFirebase, useUser } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { ScheduleConfiguration, dayNames, DayKey } from '@/lib/types';
 
@@ -72,7 +72,7 @@ interface DayScheduleAccordionProps {
 }
 
 function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionProps) {
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: `days.${dayKey}.slots`,
   });
@@ -86,7 +86,7 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
           control={form.control}
           name={`days.${dayKey}.enabled`}
           render={({ field }) => (
-            <FormItem className="flex items-center space-x-2">
+            <FormItem className="flex items-center space-x-2 mr-4">
               <FormControl>
                 <Checkbox
                   checked={field.value}
@@ -94,7 +94,8 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
                     const isChecked = !!checked;
                     field.onChange(isChecked);
                     if (!isChecked) {
-                      replace([]);
+                      // Using form.setValue to clear the array instead of replace
+                      form.setValue(`days.${dayKey}.slots`, []);
                     }
                   }}
                 />
@@ -195,13 +196,18 @@ export default function ScheduleConfigPage() {
   });
 
   useEffect(() => {
-    if (scheduleRef && !isDocLoading) {
-      if (scheduleConfig) {
-        form.reset({ days: scheduleConfig.days });
-      } else if (scheduleConfig === null) {
-        setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
-        form.reset(defaultConfig);
-      }
+    // Only proceed when loading is finished.
+    if (isDocLoading) return;
+  
+    // If data exists in Firestore, reset the form with it.
+    if (scheduleConfig) {
+      form.reset({ days: scheduleConfig.days });
+    } 
+    // If the data is explicitly null (meaning the document doesn't exist),
+    // create it with default values and reset the form.
+    else if (scheduleConfig === null && scheduleRef) {
+      setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
+      form.reset(defaultConfig);
     }
   }, [scheduleConfig, isDocLoading, form, scheduleRef]);
 
@@ -215,7 +221,7 @@ export default function ScheduleConfigPage() {
     });
   }
   
-  if (isUserLoading || isDocLoading) {
+  if (isUserLoading || (scheduleRef && isDocLoading)) {
     return <p>Cargando configuración...</p>
   }
 
