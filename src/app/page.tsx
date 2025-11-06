@@ -11,9 +11,6 @@ export default function Home() {
         <h1 className="text-4xl font-bold text-foreground">
           Bienvenidos al gestor de turnos del Museo del Manzano Historico
         </h1>
-        <p className="text-lg text-muted-foreground">
-          Gestiona tus turnos de forma fácil y rápida.
-        </p>
         <div className="flex justify-center gap-4 pt-4">
           <Link href="/login" passHref>
             <Button>Iniciar Sesión</Button>
