@@ -5,7 +5,8 @@ import { Home, Settings, LogOut, User as UserIcon } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useEffect } from 'react';
 
 export default function PanelDeControlLayout({
@@ -16,6 +17,7 @@ export default function PanelDeControlLayout({
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -27,6 +29,11 @@ export default function PanelDeControlLayout({
     return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
   }
 
+  const getTitleForPath = (path: string) => {
+    if (path.includes('/configuracion')) return 'Configuración';
+    return 'Panel de Control';
+  }
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -36,16 +43,24 @@ export default function PanelDeControlLayout({
           </div>
           <SidebarMenu className="flex-1 p-2">
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Inicio" isActive>
-                <Home />
-                <span>Inicio</span>
-              </SidebarMenuButton>
+              <Link href="/panel-de-control" passHref legacyBehavior>
+                <SidebarMenuButton asChild tooltip="Inicio" isActive={pathname === '/panel-de-control'}>
+                  <a>
+                    <Home />
+                    <span>Inicio</span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Ajustes">
-                <Settings />
-                <span>Ajustes</span>
-              </SidebarMenuButton>
+               <Link href="/panel-de-control/configuracion" passHref legacyBehavior>
+                <SidebarMenuButton asChild tooltip="Configuración" isActive={pathname.startsWith('/panel-de-control/configuracion')}>
+                  <a>
+                    <Settings />
+                    <span>Configuración</span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
           </SidebarMenu>
 
@@ -76,7 +91,7 @@ export default function PanelDeControlLayout({
       <SidebarInset>
         <header className="flex items-center justify-between p-4 border-b">
             <SidebarTrigger />
-            <h1 className="text-xl font-semibold">Panel de Control</h1>
+            <h1 className="text-xl font-semibold">{getTitleForPath(pathname)}</h1>
         </header>
         <main className="p-4">
           {children}
