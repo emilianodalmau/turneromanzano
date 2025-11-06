@@ -195,27 +195,21 @@ export default function ScheduleConfigPage() {
   });
 
   useEffect(() => {
-    // Only proceed if loading is finished.
-    if (isDocLoading) {
-      return;
-    }
-  
-    // If we have data from Firestore, populate the form with it.
-    if (scheduleConfig) {
+    if (!isDocLoading && scheduleConfig) {
       form.reset({ days: scheduleConfig.days });
     }
-    // If the data is explicitly null (meaning the doc doesn't exist)
-    // AND we have a valid reference to write to, create the doc.
-    else if (scheduleConfig === null && scheduleRef) {
-      setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
-      form.reset(defaultConfig); // Reset the form to the default state.
-    }
-  
-  }, [scheduleConfig, isDocLoading, form, scheduleRef]);
+  }, [scheduleConfig, isDocLoading, form]);
 
 
   function onSubmit(data: FormValues) {
-    if (!scheduleRef) return;
+    if (!scheduleRef) {
+        toast({
+            variant: "destructive",
+            title: 'Error',
+            description: 'No se pudo conectar a la base de datos. Inténtalo de nuevo.',
+        });
+        return;
+    }
     setDocumentNonBlocking(scheduleRef, data, { merge: false });
     toast({
       title: 'Horarios actualizados',
