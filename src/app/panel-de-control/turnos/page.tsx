@@ -66,7 +66,7 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
             {sortedDates.map((date) => (
                 <div key={date}>
                     <h2 className="text-xl font-semibold mb-4 capitalize">
-                        {format(parseISO(date + 'T00:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
+                        {format(new Date(date + 'T00:00:00'), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: es })}
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {groupedAppointments[date].map((appointment) => (
