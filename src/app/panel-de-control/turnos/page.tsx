@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { Appointment } from '@/lib/types';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
+import { Appointment, ScheduleConfiguration, TimeSlot, DayKey } from '@/lib/types';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,229 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+
+const editFormSchema = z.object({
+  responsibleName: z.string().min(1, 'El nombre es requerido.'),
+  schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
+  date: z.date({ required_error: 'Se requiere una fecha para la visita.' }),
+  timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
+  status: z.enum(['pending', 'confirmed', 'cancelled']),
+});
+
+type EditFormValues = z.infer<typeof editFormSchema>;
+
+function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
+    const { toast } = useToast();
+    const firestore = useFirestore();
+    const [isOpen, setIsOpen] = useState(false);
+    const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+    
+    const scheduleRef = useMemoFirebase(
+        () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
+        [firestore]
+    );
+
+    const appointmentsCollectionRef = useMemoFirebase(
+        () => (firestore ? collection(firestore, 'appointments') : null),
+        [firestore]
+    );
+
+    const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
+    const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsCollectionRef);
+
+    const form = useForm<EditFormValues>({
+        resolver: zodResolver(editFormSchema),
+        defaultValues: {
+            responsibleName: appointment.responsibleName,
+            schoolName: appointment.schoolName,
+            visitorCount: appointment.visitorCount,
+            date: new Date(appointment.date + 'T00:00:00'),
+            timeSlot: appointment.startTime,
+            status: appointment.status,
+        },
+    });
+
+    const selectedDate = form.watch('date');
+    const visitorCount = form.watch('visitorCount');
+
+    useEffect(() => {
+        if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
+            setAvailableSlots([]);
+            return;
+        }
+
+        const dayKey = (['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as DayKey[])[selectedDate.getDay()];
+        const dayConfig = scheduleConfig.days[dayKey];
+
+        if (!dayConfig || !dayConfig.enabled) {
+            setAvailableSlots([]);
+            return;
+        }
+
+        const appointmentsOnSelectedDate = (allAppointments || [])
+            .filter(app => app.date === format(selectedDate, 'yyyy-MM-dd') && app.id !== appointment.id);
+
+        const available = dayConfig.slots.filter((slot) => {
+            const visitorsInSlot = appointmentsOnSelectedDate
+                .filter((app) => app.startTime === slot.startTime)
+                .reduce((sum, app) => sum + app.visitorCount, 0);
+            
+            const remainingCapacity = slot.capacity - visitorsInSlot;
+            return remainingCapacity >= visitorCount;
+        });
+
+        setAvailableSlots(available);
+    }, [selectedDate, visitorCount, scheduleConfig, allAppointments, areAppointmentsLoading, form, appointment.id]);
+
+    async function onSubmit(data: EditFormValues) {
+        if (!firestore) return;
+
+        const selectedSlot = scheduleConfig?.days[(['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as DayKey[])[data.date.getDay()]]
+                                .slots.find(slot => slot.startTime === data.timeSlot);
+
+        if (!selectedSlot) {
+            toast({ variant: 'destructive', title: 'Error', description: 'El horario no es válido.' });
+            return;
+        }
+
+        const appointmentRef = doc(firestore, 'appointments', appointment.id);
+        const updatedAppointment = {
+            ...appointment,
+            responsibleName: data.responsibleName,
+            schoolName: data.schoolName,
+            visitorCount: data.visitorCount,
+            date: format(data.date, 'yyyy-MM-dd'),
+            startTime: selectedSlot.startTime,
+            endTime: selectedSlot.endTime,
+            status: data.status,
+        };
+
+        setDocumentNonBlocking(appointmentRef, updatedAppointment, { merge: true });
+        toast({
+            title: 'Turno Actualizado',
+            description: 'La cita ha sido actualizada correctamente.',
+        });
+        setIsOpen(false);
+    }
+    
+    return (
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+                <Button variant="outline" className="w-full">Editar</Button>
+            </SheetTrigger>
+            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                <SheetHeader>
+                    <SheetTitle>Editar Turno</SheetTitle>
+                </SheetHeader>
+                <div className="p-4">
+                     <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <FormField control={form.control} name="schoolName" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Institución</FormLabel>
+                                    <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="responsibleName" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Responsable</FormLabel>
+                                    <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="visitorCount" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Visitantes</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="date" render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Fecha</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar mode="single" selected={field.value} onSelect={field.onChange}
+                                                disabled={(date) => {
+                                                    if (isScheduleLoading || !scheduleConfig) return true;
+                                                    const dayKey = (['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as DayKey[])[date.getDay()];
+                                                    return !scheduleConfig.days[dayKey]?.enabled || date < new Date(new Date().setHours(0,0,0,0));
+                                                }}
+                                                initialFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="timeSlot" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Horario</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un horario" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    {availableSlots.map(slot => (
+                                        <SelectItem key={slot.startTime} value={slot.startTime}>
+                                            {`${slot.startTime} - ${slot.endTime}`}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="status" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Estado</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="pending">Pendiente</SelectItem>
+                                            <SelectItem value="confirmed">Confirmado</SelectItem>
+                                            <SelectItem value="cancelled">Cancelado</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <Button type="submit">Guardar Cambios</Button>
+                        </form>
+                    </Form>
+                </div>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
 
 function AppointmentList({ appointments }: { appointments: Appointment[] }) {
     const firestore = useFirestore();
@@ -109,7 +331,8 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
                                         <Badge variant={getStatusVariant(appointment.status)}>{getStatusText(appointment.status)}</Badge>
                                     </div>
                                 </CardContent>
-                                <CardFooter>
+                                <CardFooter className="flex gap-2">
+                                    <EditAppointmentSheet appointment={appointment} />
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button variant="destructive" className="w-full">Eliminar</Button>

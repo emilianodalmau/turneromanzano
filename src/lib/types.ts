@@ -28,7 +28,13 @@ export interface ScheduleConfiguration {
   };
 }
 
-export interface Appointment {
+// Omit 'id' from the base Appointment to prevent it from being overwritten during updates.
+export interface Appointment extends Omit<MutableAppointment, 'id'> {
+  readonly id: string;
+}
+
+// This represents the fields that can be created or updated.
+export interface MutableAppointment {
   id: string;
   userId: string;
   date: string; // Stored as 'yyyy-MM-dd'
