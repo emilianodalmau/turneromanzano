@@ -85,6 +85,10 @@
             "description": "The status of the appointment.",
             "enum": ["pending", "confirmed", "cancelled"]
         },
+        "paid": {
+            "type": "boolean",
+            "description": "Whether the appointment has been paid."
+        },
         "createdAt": {
             "type": "string",
             "description": "The timestamp when the appointment was created.",

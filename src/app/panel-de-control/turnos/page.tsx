@@ -39,6 +39,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const editFormSchema = z.object({
   responsibleName: z.string().min(1, 'El nombre es requerido.'),
@@ -258,6 +260,16 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
         });
     };
 
+    const handlePaidToggle = (appointment: Appointment, paid: boolean) => {
+        if (!firestore) return;
+        const docRef = doc(firestore, 'appointments', appointment.id);
+        setDocumentNonBlocking(docRef, { paid }, { merge: true });
+        toast({
+            title: 'Estado de pago actualizado',
+            description: `El turno ahora está marcado como ${paid ? 'Pagado' : 'No Pagado'}.`,
+        });
+    };
+
     const groupedAppointments = useMemo(() => {
         const sortedAppointments = [...appointments].sort((a, b) => {
             if (!a.startTime || !b.startTime) return 0;
@@ -323,12 +335,20 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
                                     <CardTitle>{`${appointment.startTime} - ${appointment.endTime}`}</CardTitle>
                                     <CardDescription>{appointment.schoolName}</CardDescription>
                                 </CardHeader>
-                                <CardContent className="space-y-2">
+                                <CardContent className="space-y-4">
                                     <p className="text-sm text-muted-foreground">Responsable: {appointment.responsibleName}</p>
                                     <p className="text-sm text-muted-foreground">Visitantes: {appointment.visitorCount}</p>
                                     <div className="flex items-center">
                                         <p className="text-sm text-muted-foreground mr-2">Estado:</p>
                                         <Badge variant={getStatusVariant(appointment.status)}>{getStatusText(appointment.status)}</Badge>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id={`paid-switch-${appointment.id}`}
+                                            checked={appointment.paid}
+                                            onCheckedChange={(checked) => handlePaidToggle(appointment, checked)}
+                                        />
+                                        <Label htmlFor={`paid-switch-${appointment.id}`}>Pagado</Label>
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex gap-2">

@@ -44,5 +44,6 @@ export interface MutableAppointment {
   schoolName: string;
   visitorCount: number;
   status: 'pending' | 'confirmed' | 'cancelled';
+  paid?: boolean;
   createdAt: string;
 }
