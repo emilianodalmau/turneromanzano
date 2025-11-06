@@ -1,20 +1,42 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import React, { useMemo, useState } from 'react';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { Appointment } from '@/lib/types';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function AppointmentList({ appointments }: { appointments: Appointment[] }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
+    const handleDelete = (appointmentId: string) => {
+        if (!firestore) return;
+        const docRef = doc(firestore, 'appointments', appointmentId);
+        deleteDocumentNonBlocking(docRef);
+        toast({
+            title: 'Turno Eliminado',
+            description: 'La cita ha sido eliminada correctamente.',
+        });
+    };
+
     const groupedAppointments = useMemo(() => {
-        if (!appointments) return {};
-        
-        // Secondary sort by startTime on the client
         const sortedAppointments = [...appointments].sort((a, b) => {
             if (!a.startTime || !b.startTime) return 0;
             return a.startTime.localeCompare(b.startTime)
@@ -62,7 +84,6 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
         return <p>No hay turnos registrados por el momento.</p>;
     }
 
-    // Get sorted dates
     const sortedDates = Object.keys(groupedAppointments).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
 
@@ -89,7 +110,23 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
                                     </div>
                                 </CardContent>
                                 <CardFooter>
-                                    <Button variant="outline" className="w-full">Gestionar</Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" className="w-full">Eliminar</Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción no se puede deshacer. Esto eliminará permanentemente la cita.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(appointment.id)}>Eliminar</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </CardFooter>
                             </Card>
                         ))}
