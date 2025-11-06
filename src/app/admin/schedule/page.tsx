@@ -48,10 +48,15 @@ export default function SchedulePage() {
   });
 
   useEffect(() => {
+    // If the data from Firestore is loaded, reset the form with it.
     if (scheduleConfig) {
       form.reset(scheduleConfig);
-    } else if (!isLoading && scheduleConfig === null && firestore && scheduleRef) {
-      // If loading is finished, AND we've confirmed the doc is null (doesn't exist), create it.
+    } 
+    // This is the critical part: only create the default config if...
+    // 1. The loading has finished.
+    // 2. The hook has explicitly returned `null` (meaning the doc doesn't exist).
+    // 3. We have a valid firestore instance and a document reference.
+    else if (!isLoading && scheduleConfig === null && firestore && scheduleRef) {
       setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
     }
   }, [scheduleConfig, isLoading, form, firestore, scheduleRef]);
@@ -60,6 +65,7 @@ export default function SchedulePage() {
     if (!firestore || !scheduleRef) return;
     
     startTransition(() => {
+      // Use the non-blocking update to save the entire form data, replacing the old one.
       setDocumentNonBlocking(scheduleRef, data, { merge: false });
       toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
     });
