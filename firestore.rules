@@ -10,7 +10,7 @@ service cloud.firestore {
 
     match /appointments/{appointmentId} {
       allow create: if true;
-      allow read: if true;
+      allow read, list: if true;
       allow update, delete: if request.auth != null;
     }
 
