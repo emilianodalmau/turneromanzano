@@ -50,8 +50,8 @@ export default function SchedulePage() {
   useEffect(() => {
     if (scheduleConfig) {
       form.reset(scheduleConfig);
-    } else if (!isLoading && !scheduleConfig && firestore && scheduleRef) {
-      // If loading is finished, no config exists, create the default one using our non-blocking function.
+    } else if (!isLoading && scheduleConfig === null && firestore && scheduleRef) {
+      // If loading is finished, AND we've confirmed the doc is null (doesn't exist), create it.
       setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
     }
   }, [scheduleConfig, isLoading, form, firestore, scheduleRef]);
@@ -60,16 +60,16 @@ export default function SchedulePage() {
     if (!firestore || !scheduleRef) return;
     
     startTransition(() => {
-      // Pass the form data directly, ensuring it matches the expected type.
       setDocumentNonBlocking(scheduleRef, data, { merge: false });
       toast({ title: 'Horarios actualizados', description: 'La configuración de horarios se ha guardado.' });
     });
   };
 
-  if (isLoading) {
+  if (isLoading && !scheduleConfig) { // Show loader only on initial load
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Cargando configuración...</p>
       </div>
     );
   }
