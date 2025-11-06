@@ -8,13 +8,6 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background">
       <div className="text-center space-y-4">
-        <Image
-          src="https://www.tunuyan.gov.ar/site/wp-content/uploads/2022/01/logo-tunuyan-1.png"
-          alt="Logo de la Municipalidad de Tunuyán"
-          width={200}
-          height={60}
-          className="mx-auto mb-4"
-        />
         <h1 className="text-4xl font-bold text-foreground">
           Bienvenidos al gestor de turnos del Museo del Manzano Historico
         </h1>
