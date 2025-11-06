@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
-import { Home, Settings, LogOut, User as UserIcon } from 'lucide-react';
+import { Home, Settings, LogOut, User as UserIcon, CalendarDays } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,6 +30,7 @@ export default function PanelDeControlLayout({
   }
 
   const getTitleForPath = (path: string) => {
+    if (path.includes('/configuracion-de-agenda')) return 'Configuración de Agenda';
     if (path.includes('/configuracion')) return 'Configuración';
     return 'Panel de Control';
   }
@@ -48,6 +49,16 @@ export default function PanelDeControlLayout({
                   <a>
                     <Home />
                     <span>Inicio</span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+               <Link href="/panel-de-control/configuracion-de-agenda" passHref legacyBehavior>
+                <SidebarMenuButton asChild tooltip="Configuración de Agenda" isActive={pathname.startsWith('/panel-de-control/configuracion-de-agenda')}>
+                  <a>
+                    <CalendarDays />
+                    <span>Agenda</span>
                   </a>
                 </SidebarMenuButton>
               </Link>
