@@ -1,40 +1,26 @@
 'use client';
 
-import { useUser, useAuth } from "@/firebase";
-import { signOut } from "firebase/auth";
-import Link from 'next/link';
-import { Button } from "@/components/ui/button";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser } from "@/firebase";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
+  const router = useRouter();
 
-  if (isUserLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
-  }
+  useEffect(() => {
+    if (!isUserLoading) {
+      if (user) {
+        router.replace('/panel-de-control');
+      } else {
+        router.replace('/login');
+      }
+    }
+  }, [user, isUserLoading, router]);
 
   return (
-    <div className="container mx-auto p-8 text-center">
-      <h1 className="text-3xl font-bold mb-4">Punto de Partida de Firebase</h1>
-      
-      {user ? (
-        <div>
-          <p className="mb-4">Bienvenido, <span className="font-semibold">{user.email || 'Usuario'}</span>!</p>
-          <Button 
-            onClick={() => signOut(auth)} 
-            variant="destructive"
-          >
-            Cerrar Sesión
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <p>No has iniciado sesión.</p>
-          <Button asChild>
-            <Link href="/login">Ir a Iniciar Sesión</Link>
-          </Button>
-        </div>
-      )}
+    <div className="flex items-center justify-center min-h-screen">
+      Cargando...
     </div>
   );
 }

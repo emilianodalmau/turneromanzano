@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      router.push('/');
+      router.push('/panel-de-control');
     }
   }, [user, isUserLoading, router]);
 
