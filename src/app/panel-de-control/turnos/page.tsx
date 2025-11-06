@@ -15,14 +15,19 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
         if (!appointments) return {};
         
         // Secondary sort by startTime on the client
-        const sortedAppointments = [...appointments].sort((a, b) => a.startTime.localeCompare(b.startTime));
+        const sortedAppointments = [...appointments].sort((a, b) => {
+            if (!a.startTime || !b.startTime) return 0;
+            return a.startTime.localeCompare(b.startTime)
+        });
 
         return sortedAppointments.reduce((acc, appointment) => {
-            const date = appointment.date;
-            if (!acc[date]) {
-                acc[date] = [];
+            if (appointment.date) {
+                const date = appointment.date;
+                if (!acc[date]) {
+                    acc[date] = [];
+                }
+                acc[date].push(appointment);
             }
-            acc[date].push(appointment);
             return acc;
         }, {} as Record<string, Appointment[]>);
     }, [appointments]);
