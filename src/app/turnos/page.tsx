@@ -84,6 +84,7 @@ export default function TurnosPage() {
   const visitorCount = form.watch('visitorCount');
 
   useEffect(() => {
+    // No calcular si falta alguna de las dependencias clave.
     if (!selectedDate || !scheduleConfig || !allAppointments) {
       setAvailableSlots([]);
       return;
@@ -97,10 +98,12 @@ export default function TurnosPage() {
       return;
     }
 
+    // Filtra las citas para la fecha seleccionada
     const appointmentsOnDate = allAppointments.filter(
       (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
     );
 
+    // Calcula la capacidad restante para cada horario
     const slotsWithCapacity = dayConfig.slots
       .map((slot) => {
         const visitorsInSlot = appointmentsOnDate
@@ -110,7 +113,7 @@ export default function TurnosPage() {
         const remainingCapacity = slot.capacity - visitorsInSlot;
         return { ...slot, remainingCapacity };
       })
-      .filter((slot) => slot.remainingCapacity >= visitorCount)
+      .filter((slot) => slot.remainingCapacity >= visitorCount) // Filtra por la cantidad de visitantes del formulario
       .map((slot) => ({
         ...slot,
         display: `${slot.startTime} - ${slot.endTime} (Capacidad restante: ${slot.remainingCapacity})`,
@@ -184,7 +187,7 @@ export default function TurnosPage() {
           <CardDescription>Completa el formulario para solicitar un turno de visita.</CardDescription>
         </CardHeader>
         <CardContent>
-          {isDataLoading ? (
+          {isScheduleLoading ? (
             <div className="flex justify-center items-center h-40">
                 <p>Cargando configuración de turnos...</p>
             </div>
@@ -328,9 +331,10 @@ export default function TurnosPage() {
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         disabled={(date) => {
-                                            if (isScheduleLoading) return false; // Don't disable while loading
+                                            if (isScheduleLoading) return true; // Disable all dates while loading
                                             const dayKey = format(date, 'EEEE', { locale: es }).toLowerCase() as DayKey;
-                                            return date < new Date(new Date().setHours(0,0,0,0)) || !scheduleConfig?.days[dayKey]?.enabled;
+                                            const dayIsEnabled = scheduleConfig?.days[dayKey]?.enabled ?? false;
+                                            return date < new Date(new Date().setHours(0,0,0,0)) || !dayIsEnabled;
                                         }}
                                         initialFocus
                                     />
@@ -349,7 +353,11 @@ export default function TurnosPage() {
                                 <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
                                     <FormControl>
                                     <SelectTrigger>
-                                        <SelectValue placeholder={!selectedDate ? "Selecciona una fecha primero" : "Selecciona un horario"} />
+                                        <SelectValue placeholder={
+                                            areAppointmentsLoading ? "Calculando horarios..." :
+                                            !selectedDate ? "Selecciona una fecha primero" : 
+                                            "Selecciona un horario"
+                                        } />
                                     </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
