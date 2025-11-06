@@ -179,13 +179,12 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
 
 export default function ScheduleConfigPage() {
   const { toast } = useToast();
-  const { areServicesAvailable } = useFirebase();
-  const { isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
   const scheduleRef = useMemoFirebase(
-    () => (areServicesAvailable ? doc(firestore, 'scheduleConfigurations', 'default') : null),
-    [firestore, areServicesAvailable]
+    () => (firestore && user ? doc(firestore, 'scheduleConfigurations', 'default') : null),
+    [firestore, user]
   );
 
   const { data: scheduleConfig, isLoading: isDocLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
@@ -196,13 +195,15 @@ export default function ScheduleConfigPage() {
   });
 
   useEffect(() => {
-    if (areServicesAvailable && !isDocLoading && scheduleConfig === null && scheduleRef) {
+    if (scheduleRef && !isDocLoading) {
+      if (scheduleConfig) {
+        form.reset({ days: scheduleConfig.days });
+      } else if (scheduleConfig === null) {
         setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
+        form.reset(defaultConfig);
+      }
     }
-    if (scheduleConfig) {
-      form.reset({ days: scheduleConfig.days });
-    }
-  }, [scheduleConfig, isDocLoading, areServicesAvailable, form, scheduleRef]);
+  }, [scheduleConfig, isDocLoading, form, scheduleRef]);
 
 
   function onSubmit(data: FormValues) {
@@ -213,8 +214,8 @@ export default function ScheduleConfigPage() {
       description: 'La configuración de la agenda ha sido guardada correctamente.',
     });
   }
-
-  if (!areServicesAvailable || isUserLoading || isDocLoading) {
+  
+  if (isUserLoading || isDocLoading) {
     return <p>Cargando configuración...</p>
   }
 
