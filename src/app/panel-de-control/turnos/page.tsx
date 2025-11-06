@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
-import { Appointment, ScheduleConfiguration, TimeSlot, DayKey } from '@/lib/types';
+import { Appointment, ScheduleConfiguration, TimeSlot, DayKey, User } from '@/lib/types';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,9 @@ const editFormSchema = z.object({
   date: z.date({ required_error: 'Se requiere una fecha para la visita.' }),
   timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
   status: z.enum(['pending', 'confirmed', 'cancelled']),
+  dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
+  email: z.string().email('Correo electrónico no válido.'),
+  phone: z.string().min(1, 'El teléfono es requerido.'),
 });
 
 type EditFormValues = z.infer<typeof editFormSchema>;
@@ -64,12 +67,18 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         [firestore]
     );
 
+    const userRef = useMemoFirebase(
+        () => (firestore && appointment.userId ? doc(firestore, 'users', appointment.userId) : null),
+        [firestore, appointment.userId]
+    );
+
     const appointmentsCollectionRef = useMemoFirebase(
         () => (firestore ? collection(firestore, 'appointments') : null),
         [firestore]
     );
 
     const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
+    const { data: userData, isLoading: isUserLoading } = useDoc<User>(userRef);
     const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsCollectionRef);
 
     const form = useForm<EditFormValues>({
@@ -81,8 +90,20 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
             date: new Date(appointment.date + 'T00:00:00'),
             timeSlot: appointment.startTime,
             status: appointment.status,
+            dni: '',
+            email: '',
+            phone: '',
         },
     });
+    
+    useEffect(() => {
+        if (userData) {
+            form.setValue('dni', userData.dni);
+            form.setValue('email', userData.email);
+            form.setValue('phone', userData.phone);
+        }
+    }, [userData, form]);
+
 
     const selectedDate = form.watch('date');
     const visitorCount = form.watch('visitorCount');
@@ -126,6 +147,20 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
             toast({ variant: 'destructive', title: 'Error', description: 'El horario no es válido.' });
             return;
         }
+        
+        // Update user data
+        if (userRef) {
+            const [firstName, ...lastNameParts] = data.responsibleName.split(' ');
+            const userUpdate = {
+                name: firstName || '',
+                lastName: lastNameParts.join(' '),
+                dni: data.dni,
+                email: data.email,
+                phone: data.phone,
+            };
+            setDocumentNonBlocking(userRef, userUpdate, { merge: true });
+        }
+
 
         const appointmentRef = doc(firestore, 'appointments', appointment.id);
         const updatedAppointment = {
@@ -171,6 +206,33 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                                     <FormLabel>Responsable</FormLabel>
                                     <FormControl><Input {...field} /></FormControl>
                                     <FormMessage />
+                                </FormItem>
+                            )}/>
+                             <FormField control={form.control} name="dni" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>DNI del responsable</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ej: 30123456" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="email" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Email de contacto</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="ejemplo@correo.com" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="phone" render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Teléfono de contacto</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ej: 1122334455" {...field} />
+                                </FormControl>
+                                <FormMessage />
                                 </FormItem>
                             )}/>
                             <FormField control={form.control} name="visitorCount" render={({ field }) => (
@@ -345,7 +407,7 @@ function AppointmentList({ appointments }: { appointments: Appointment[] }) {
                                     <div className="flex items-center space-x-2">
                                         <Switch
                                             id={`paid-switch-${appointment.id}`}
-                                            checked={appointment.paid}
+                                            checked={!!appointment.paid}
                                             onCheckedChange={(checked) => handlePaidToggle(appointment, checked)}
                                         />
                                         <Label htmlFor={`paid-switch-${appointment.id}`}>Pagado</Label>
@@ -396,3 +458,5 @@ export default function GestionTurnosPage() {
 
     return <AppointmentList appointments={appointments || []} />;
 }
+
+    

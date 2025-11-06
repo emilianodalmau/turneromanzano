@@ -47,3 +47,14 @@ export interface MutableAppointment {
   paid?: boolean;
   createdAt: string;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  lastName: string;
+  dni: string;
+  phone: string;
+  email: string;
+}
+
+    
