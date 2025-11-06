@@ -98,7 +98,7 @@ export default function TurnosPage() {
     }
 
     const appointmentsOnDate = allAppointments.filter(
-      (app) => format(new Date(app.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+      (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
     );
 
     const slotsWithCapacity = dayConfig.slots
@@ -113,7 +113,7 @@ export default function TurnosPage() {
       .filter((slot) => slot.remainingCapacity >= visitorCount)
       .map((slot) => ({
         ...slot,
-        display: `${slot.startTime} - ${slot.endTime} (Capacidad: ${slot.remainingCapacity})`,
+        display: `${slot.startTime} - ${slot.endTime} (Capacidad restante: ${slot.remainingCapacity})`,
       }));
       
     setAvailableSlots(slotsWithCapacity);
@@ -328,6 +328,7 @@ export default function TurnosPage() {
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         disabled={(date) => {
+                                            if (isScheduleLoading) return false; // Don't disable while loading
                                             const dayKey = format(date, 'EEEE', { locale: es }).toLowerCase() as DayKey;
                                             return date < new Date(new Date().setHours(0,0,0,0)) || !scheduleConfig?.days[dayKey]?.enabled;
                                         }}
