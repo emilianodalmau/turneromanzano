@@ -94,7 +94,6 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
                     const isChecked = !!checked;
                     field.onChange(isChecked);
                     if (!isChecked) {
-                      // Using form.setValue to clear the array instead of replace
                       form.setValue(`days.${dayKey}.slots`, []);
                     }
                   }}
@@ -196,21 +195,22 @@ export default function ScheduleConfigPage() {
   });
 
   useEffect(() => {
-    // Wait until the document loading is complete before doing anything.
+    // Only proceed if loading is finished.
     if (isDocLoading) {
       return;
     }
-
-    // If data exists in Firestore, reset the form with it.
+  
+    // If we have data from Firestore, populate the form with it.
     if (scheduleConfig) {
       form.reset({ days: scheduleConfig.days });
     }
-    // If the data is explicitly null (meaning the document doesn't exist)
-    // and we have a valid reference to write to, create the document.
+    // If the data is explicitly null (meaning the doc doesn't exist)
+    // AND we have a valid reference to write to, create the doc.
     else if (scheduleConfig === null && scheduleRef) {
       setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
-      form.reset(defaultConfig);
+      form.reset(defaultConfig); // Reset the form to the default state.
     }
+  
   }, [scheduleConfig, isDocLoading, form, scheduleRef]);
 
 
