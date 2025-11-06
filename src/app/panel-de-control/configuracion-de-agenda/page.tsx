@@ -23,8 +23,8 @@ import {
 } from '@/components/ui/accordion';
 import { Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useEffect, useMemo } from 'react';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, useFirebase } from '@/firebase';
+import { useEffect } from 'react';
+import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, useFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { ScheduleConfiguration, dayNames, DayKey } from '@/lib/types';
 
@@ -81,12 +81,12 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
 
   return (
     <AccordionItem value={dayKey}>
-      <div className="flex items-center w-full">
+      <div className="flex items-center w-full p-4">
         <FormField
           control={form.control}
           name={`days.${dayKey}.enabled`}
           render={({ field }) => (
-            <FormItem className="flex items-center space-x-2 p-4">
+            <FormItem className="flex items-center space-x-2">
               <FormControl>
                 <Checkbox
                   checked={field.value}
@@ -103,10 +103,10 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
           )}
         />
         <AccordionTrigger>
-          <FormLabel className="text-lg">{dayName}</FormLabel>
+          <FormLabel className="text-lg cursor-pointer">{dayName}</FormLabel>
         </AccordionTrigger>
       </div>
-      <AccordionContent className="pl-4 border-l ml-4">
+      <AccordionContent className="pl-8 border-l ml-4">
         {isDayEnabled ? (
           <div className="space-y-4 pt-4">
             {fields.map((slot, slotIndex) => (
@@ -179,14 +179,16 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
 
 export default function ScheduleConfigPage() {
   const { toast } = useToast();
-  const { firestore, areServicesAvailable } = useFirebase();
+  const { areServicesAvailable } = useFirebase();
+  const { isUserLoading } = useUser();
+  const firestore = useFirestore();
 
   const scheduleRef = useMemoFirebase(
     () => (areServicesAvailable ? doc(firestore, 'scheduleConfigurations', 'default') : null),
     [firestore, areServicesAvailable]
   );
 
-  const { data: scheduleConfig, isLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
+  const { data: scheduleConfig, isLoading: isDocLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -194,13 +196,15 @@ export default function ScheduleConfigPage() {
   });
 
   useEffect(() => {
-    if (!isLoading && scheduleConfig === null && scheduleRef) {
+    // Solo se ejecuta si los servicios están listos, la carga del doc ha terminado,
+    // el doc no existe, y la referencia es válida.
+    if (!isDocLoading && areServicesAvailable && scheduleConfig === null && scheduleRef) {
         setDocumentNonBlocking(scheduleRef, defaultConfig, { merge: false });
     }
     if (scheduleConfig) {
       form.reset({ days: scheduleConfig.days });
     }
-  }, [scheduleConfig, isLoading, form, scheduleRef]);
+  }, [scheduleConfig, isDocLoading, areServicesAvailable, form, scheduleRef]);
 
 
   function onSubmit(data: FormValues) {
@@ -212,7 +216,9 @@ export default function ScheduleConfigPage() {
     });
   }
 
-  if (isLoading) {
+  // Muestra el estado de carga si los servicios de Firebase no están listos,
+  // la autenticación del usuario está en curso, o el documento se está cargando.
+  if (!areServicesAvailable || isUserLoading || isDocLoading) {
     return <p>Cargando configuración...</p>
   }
 
