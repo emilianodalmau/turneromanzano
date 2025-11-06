@@ -8,7 +8,7 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-background">
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold text-foreground">
-          Bienvenidos a Turnos Manzano
+          Bienvenidos al gestor de turnos del Museo del Manzano Historico
         </h1>
         <p className="text-lg text-muted-foreground">
           Gestiona tus turnos de forma fácil y rápida.
