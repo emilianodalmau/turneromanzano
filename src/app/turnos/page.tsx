@@ -78,7 +78,6 @@ export default function TurnosPage() {
   });
 
   const selectedDate = form.watch('date');
-  const visitorCount = form.watch('visitorCount');
 
   useEffect(() => {
     if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
@@ -99,18 +98,17 @@ export default function TurnosPage() {
     );
 
     const available = dayConfig.slots.filter((slot) => {
-      const visitorsInSlot = appointmentsOnSelectedDate
-        .filter((app) => app.startTime === slot.startTime)
-        .reduce((sum, app) => sum + app.visitorCount, 0);
+      const appointmentsInSlot = appointmentsOnSelectedDate.filter(
+        (app) => app.startTime === slot.startTime
+      ).length;
       
-      const remainingCapacity = slot.capacity - visitorsInSlot;
-      return remainingCapacity >= visitorCount;
+      return appointmentsInSlot < slot.capacity;
     });
 
     setAvailableSlots(available);
     form.setValue('timeSlot', '');
 
-  }, [selectedDate, visitorCount, scheduleConfig, allAppointments, areAppointmentsLoading, form]);
+  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form]);
 
 
   async function onSubmit(data: FormValues) {
@@ -138,6 +136,7 @@ export default function TurnosPage() {
             schoolName: data.schoolName,
             visitorCount: data.visitorCount,
             status: 'pending' as 'pending',
+            paid: false,
             createdAt: new Date().toISOString(),
         };
 
@@ -285,7 +284,7 @@ export default function TurnosPage() {
                                     </SelectContent>
                                 </Select>
                                 {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
-                                {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha o cantidad de personas.</p>}
+                                {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -377,3 +376,5 @@ export default function TurnosPage() {
     </div>
   );
 }
+
+    

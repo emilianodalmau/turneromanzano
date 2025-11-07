@@ -106,7 +106,6 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
 
 
     const selectedDate = form.watch('date');
-    const visitorCount = form.watch('visitorCount');
 
     useEffect(() => {
         if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
@@ -126,16 +125,15 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
             .filter(app => app.date === format(selectedDate, 'yyyy-MM-dd') && app.id !== appointment.id);
 
         const available = dayConfig.slots.filter((slot) => {
-            const visitorsInSlot = appointmentsOnSelectedDate
+            const appointmentsInSlot = appointmentsOnSelectedDate
                 .filter((app) => app.startTime === slot.startTime)
-                .reduce((sum, app) => sum + app.visitorCount, 0);
+                .length;
             
-            const remainingCapacity = slot.capacity - visitorsInSlot;
-            return remainingCapacity >= visitorCount;
+            return appointmentsInSlot < slot.capacity;
         });
 
         setAvailableSlots(available);
-    }, [selectedDate, visitorCount, scheduleConfig, allAppointments, areAppointmentsLoading, form, appointment.id]);
+    }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form, appointment.id]);
 
     async function onSubmit(data: EditFormValues) {
         if (!firestore) return;
@@ -590,3 +588,5 @@ export default function GestionTurnosPage() {
 
     return <AppointmentList appointments={appointments || []} users={users || []} />;
 }
+
+    
