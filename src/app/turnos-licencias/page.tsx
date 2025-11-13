@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch, useFormContext, ControllerRenderProps } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,37 +17,189 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes } from '@/lib/types';
+import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, ProcedureType, DocumentRequirement } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertCircle, CalendarIcon } from 'lucide-react';
+import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+
+// --- ZOD SCHEMA ---
+const fileSchema = z.any().optional();
+
+const documentsSchema = z.object({
+  dni: fileSchema,
+  cuil: fileSchema,
+  cursos: fileSchema,
+  certificado_medico_opcional: fileSchema,
+  tarjeta_verde: fileSchema,
+  poliza_seguro: fileSchema,
+  licencia_acompanante: fileSchema,
+  licencia_actual: fileSchema,
+  curso_nacional: fileSchema,
+  certificado_reincidencia: fileSchema,
+  analisis_sangre: fileSchema,
+  informe_vision: fileSchema,
+  informe_psicologico: fileSchema,
+  informe_audiometria: fileSchema,
+  electroencefalograma: fileSchema,
+  examen_clinico_laboral: fileSchema,
+  apto_medico_tratante_opcional: fileSchema,
+  analisis_sangre_apto: fileSchema,
+  electrocardiograma_apto: fileSchema,
+  nota_inhabilitacion: fileSchema,
+  cursos_rehabilitacion: fileSchema,
+  licencia_acompanante_rehab: fileSchema,
+}).optional();
+
 
 const formSchema = z.object({
+  // Step 1
+  date: z.date({ required_error: 'Se requiere una fecha para el turno.' }),
+  timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
+  
+  // Step 2
   name: z.string().min(1, 'El nombre es requerido.'),
   lastName: z.string().min(1, 'El apellido es requerido.'),
   email: z.string().email('Correo electrónico no válido.'),
   phone: z.string().min(1, 'El teléfono es requerido.'),
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
+  
+  // Step 3
   procedureType: z.string().min(1, 'Se requiere seleccionar un tipo de trámite.'),
-  date: z.date({ required_error: 'Se requiere una fecha para el turno.' }),
-  timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
+  documents: documentsSchema,
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
 const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
+
+// --- FILE INPUT COMPONENT ---
+const FileInput = React.forwardRef<HTMLInputElement, ControllerRenderProps<FormValues, any>>((field, ref) => {
+    const [fileName, setFileName] = useState<string | null>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setFileName(file.name);
+            field.onChange(file); // Pass the file object to react-hook-form
+        } else {
+            setFileName(null);
+            field.onChange(null);
+        }
+    };
+
+    return (
+         <div className="flex items-center space-x-2">
+            <label htmlFor={field.name} className="flex-1 cursor-pointer">
+                <div className="flex items-center justify-center w-full px-4 py-2 text-sm border rounded-md hover:bg-muted">
+                    <Upload className="w-4 h-4 mr-2" />
+                    <span>{fileName ? 'Cambiar archivo' : 'Seleccionar archivo'}</span>
+                </div>
+                <input
+                    id={field.name}
+                    type="file"
+                    className="sr-only"
+                    ref={ref}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    onChange={handleFileChange}
+                />
+            </label>
+            {fileName && (
+                 <div className="flex items-center text-sm text-green-600">
+                    <FileText className="w-4 h-4 mr-1" />
+                    <span className="truncate max-w-xs">{fileName}</span>
+                 </div>
+            )}
+        </div>
+    );
+});
+FileInput.displayName = "FileInput";
+
+
+// --- DOCUMENTS FORM SECTION ---
+function DocumentsFormSection() {
+    const { control } = useFormContext<FormValues>();
+    const procedureTypeId = useWatch({ control, name: 'procedureType' });
+
+    const selectedProcedure = useMemo(
+        () => procedureTypes.find((p) => p.id === procedureTypeId),
+        [procedureTypeId]
+    );
+    
+    const renderField = (doc: DocumentRequirement) => {
+        if (doc.isLink) {
+             return (
+                <div key={doc.id} className="space-y-2">
+                     <div className="flex items-center justify-between">
+                        <FormLabel>{doc.label}</FormLabel>
+                        <Link href={doc.href || '#'} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm">
+                                <LinkIcon className="w-4 h-4 mr-2" />
+                                Ir al sitio
+                            </Button>
+                        </Link>
+                    </div>
+                     {doc.description && <p className="text-sm text-muted-foreground">{doc.description}</p>}
+                </div>
+            );
+        }
+
+        return (
+            <FormField
+                key={doc.id}
+                control={control}
+                name={`documents.${doc.id}` as any}
+                render={({ field }) => (
+                    <FormItem>
+                         <div className="flex items-center justify-between">
+                            <FormLabel>{doc.label} {doc.optional && <span className="text-xs text-muted-foreground">(Opcional)</span>}</FormLabel>
+                         </div>
+                        <FormControl>
+                            <FileInput {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+        );
+    }
+    
+    if (!selectedProcedure) {
+        return <p className="text-sm text-muted-foreground">Selecciona un tipo de trámite para ver los documentos requeridos.</p>;
+    }
+
+    return (
+        <div className="space-y-6">
+            {selectedProcedure.docs.map((item, index) => {
+                if ('category' in item) {
+                    return (
+                        <div key={index} className="p-4 border rounded-lg space-y-4">
+                            <h4 className="font-semibold text-md">{item.category}</h4>
+                            {item.docs.map(renderField)}
+                        </div>
+                    );
+                }
+                return renderField(item);
+            })}
+        </div>
+    );
+}
+
+// --- MAIN PAGE COMPONENT ---
 export default function TurnosLicenciasPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
 
   const scheduleRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'licenseScheduleConfigurations', 'default') : null),
@@ -85,9 +237,6 @@ export default function TurnosLicenciasPage() {
       return;
     }
     
-    // In a real-world scenario for a public page, you would fetch only available slots from a backend function
-    // instead of fetching all appointments to calculate availability on the client.
-    // For this implementation, we assume we can calculate it based on capacity alone, without checking existing appointments.
     const allAppointments: LicenseAppointment[] = [];
     const appointmentsOnSelectedDate = allAppointments.filter(
       (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
@@ -101,8 +250,9 @@ export default function TurnosLicenciasPage() {
     });
 
     setAvailableSlots(available);
+    form.setValue('timeSlot', '');
     
-  }, [selectedDate, scheduleConfig]);
+  }, [selectedDate, scheduleConfig, form]);
 
 
   async function onSubmit(data: FormValues) {
@@ -121,13 +271,13 @@ export default function TurnosLicenciasPage() {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
 
-        const newAppointmentRequest = {
+        const newAppointmentRequest: Omit<MutableLicenseAppointment, 'id'> = {
             userId: userId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
             procedureType: data.procedureType,
-            status: 'pending' as 'pending',
+            status: 'pending',
             createdAt: new Date().toISOString(),
         };
 
@@ -152,6 +302,7 @@ export default function TurnosLicenciasPage() {
             description: 'Hemos recibido tu solicitud. Recuerda cumplir con los requisitos informados.',
         });
         form.reset();
+        setCurrentStep(0);
     } catch (error) {
         console.error('Error al guardar la solicitud de turno:', error);
         toast({
@@ -162,6 +313,22 @@ export default function TurnosLicenciasPage() {
     }
 }
 
+  const steps = [
+    { name: 'Turno', fields: ['date', 'timeSlot'] },
+    { name: 'Datos Personales', fields: ['name', 'lastName', 'email', 'phone', 'dni'] },
+    { name: 'Trámite y Documentos', fields: ['procedureType', 'documents'] },
+  ];
+
+  const nextStep = async () => {
+    const fieldsToValidate = steps[currentStep].fields as (keyof FormValues)[];
+    const isValid = await form.trigger(fieldsToValidate);
+    if (isValid) {
+      setCurrentStep(s => Math.min(s + 1, steps.length - 1));
+    }
+  };
+
+  const prevStep = () => setCurrentStep(s => Math.max(s - 1, 0));
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <Card className="max-w-4xl mx-auto">
@@ -171,51 +338,32 @@ export default function TurnosLicenciasPage() {
         </CardHeader>
         <CardContent>
             <div className="space-y-4 mb-8">
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle className="font-bold">RECUERDE</AlertTitle>
-                    <AlertDescription>
-                        Solo podrán realizar el trámite las personas que posean domicilio en el departamento de Tunuyán y con el último ejemplar de su D.N.I.
-                    </AlertDescription>
-                </Alert>
-                <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle className="font-bold">INFORMACIÓN IMPORTANTE - LEY 24449 - ARTÍCULO 18</AlertTitle>
-                    <AlertDescription>
-                        Todo ciudadano que realice modificaciones de Datos en su DOCUMENTO NACIONAL DE IDENTIDAD debe actualizar los mismos en su licencia de conducir, en un plazo no superior a 90 DÍAS de realizada la edición del mismo. La licencia CADUCA A LOS 90 DÍAS de producido el cambio no denunciado.
-                    </AlertDescription>
-                </Alert>
+                 <Progress value={(currentStep + 1) / steps.length * 100} className="w-full" />
+                 <p className="text-sm text-center text-muted-foreground">Paso {currentStep + 1} de {steps.length}: {steps[currentStep].name}</p>
             </div>
+
+            {currentStep === 0 && (
+                <div className="space-y-4 mb-8">
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle className="font-bold">RECUERDE</AlertTitle>
+                        <AlertDescription>
+                            Solo podrán realizar el trámite las personas que posean domicilio en el departamento de Tunuyán y con el último ejemplar de su D.N.I.
+                        </AlertDescription>
+                    </Alert>
+                    <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle className="font-bold">INFORMACIÓN IMPORTANTE - LEY 24449 - ARTÍCULO 18</AlertTitle>
+                        <AlertDescription>
+                            Todo ciudadano que realice modificaciones de Datos en su DOCUMENTO NACIONAL DE IDENTIDAD debe actualizar los mismos en su licencia de conducir, en un plazo no superior a 90 DÍAS de realizada la edición del mismo. La licencia CADUCA A LOS 90 DÍAS de producido el cambio no denunciado.
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Datos del Trámite y Turno</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="procedureType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tipo de Trámite</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Selecciona un trámite" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {procedureTypes.map(proc => (
-                                    <SelectItem key={proc.id} value={proc.name}>
-                                      {proc.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <div />
+                {currentStep === 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
                             name="date"
@@ -267,11 +415,11 @@ export default function TurnosLicenciasPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Horario disponible</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecciona un horario" />
-                                    </SelectTrigger>
+                                        <SelectTrigger disabled={!selectedDate || availableSlots.length === 0}>
+                                            <SelectValue placeholder="Selecciona un horario" />
+                                        </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                     {availableSlots.map(slot => (
@@ -281,91 +429,104 @@ export default function TurnosLicenciasPage() {
                                     ))}
                                     </SelectContent>
                                 </Select>
-                                {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
-                                {selectedDate && availableSlots.length === 0 && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
                                 <FormMessage />
+                                {selectedDate && availableSlots.length === 0 && <p className="text-sm text-muted-foreground pt-1">No hay horarios disponibles para esta fecha.</p>}
                                 </FormItem>
                             )}
                         />
                     </div>
-                </div>
-
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Datos Personales</h3>
+                )}
+                
+                {currentStep === 1 && (
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nombre</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Juan" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        <FormField
-                            control={form.control}
-                            name="lastName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Apellido</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Pérez" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="dni"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>DNI</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: 30123456" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Email de contacto</FormLabel>
-                                <FormControl>
-                                    <Input type="email" placeholder="ejemplo@correo.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Teléfono de contacto</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: 2622123456" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nombre</FormLabel>
+                            <FormControl><Input placeholder="Ej: Juan" {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={form.control} name="lastName" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Apellido</FormLabel>
+                            <FormControl><Input placeholder="Ej: Pérez" {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}/>
+                         <FormField control={form.control} name="dni" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>DNI</FormLabel>
+                            <FormControl><Input placeholder="Ej: 30123456" {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}/>
+                         <FormField control={form.control} name="email" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Email de contacto</FormLabel>
+                            <FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}/>
+                         <FormField control={form.control} name="phone" render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Teléfono de contacto</FormLabel>
+                            <FormControl><Input placeholder="Ej: 2622123456" {...field} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}/>
                     </div>
-                </div>
+                )}
 
-                <div className="flex flex-col md:flex-row gap-4">
-                    <Button type="submit" className="w-full">Enviar Solicitud</Button>
-                    <Link href="/" passHref className="w-full">
-                        <Button variant="outline" className="w-full">Cancelar</Button>
-                    </Link>
+                {currentStep === 2 && (
+                    <div className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="procedureType"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Tipo de Trámite</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecciona un trámite" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    {procedureTypes.map(proc => (
+                                        <SelectItem key={proc.id} value={proc.id}>
+                                        {proc.name}
+                                        </SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <DocumentsFormSection />
+                    </div>
+                )}
+
+
+                <div className="flex justify-between gap-4 pt-4">
+                    {currentStep > 0 ? (
+                        <Button type="button" variant="outline" onClick={prevStep}>
+                            <ChevronLeft className="w-4 h-4 mr-2" />
+                            Anterior
+                        </Button>
+                    ) : <Link href="/" passHref><Button variant="outline">Cancelar</Button></Link>}
+                    
+                    {currentStep < steps.length - 1 ? (
+                        <Button type="button" onClick={nextStep}>
+                            Siguiente
+                            <ChevronRight className="w-4 h-4 ml-2" />
+                        </Button>
+                    ) : (
+                        <Button type="submit">
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            Enviar Solicitud
+                        </Button>
+                    )}
                 </div>
             </form>
           </Form>
