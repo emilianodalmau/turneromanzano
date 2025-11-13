@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -30,6 +31,11 @@
           "type": "string",
           "description": "The user's email address.",
           "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user, determining their permissions.",
+          "enum": ["manzano_admin", "license_admin", "super_admin"]
         }
       },
       "required": [
@@ -38,7 +44,8 @@
         "lastName",
         "dni",
         "phone",
-        "email"
+        "email",
+        "role"
       ]
     },
     "Appointment": {
@@ -108,11 +115,47 @@
         "createdAt"
       ]
     },
+    "LicenseAppointment": {
+      "title": "LicenseAppointment",
+      "type": "object",
+      "description": "Represents an appointment for a driver's license procedure.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "procedureType": { "type": "string", "description": "The type of license procedure (e.g., new, renewal)." },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "date", "startTime", "endTime", "procedureType", "status", "createdAt"]
+    },
     "ScheduleConfiguration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ScheduleConfiguration",
       "type": "object",
-      "description": "Represents the configuration for available appointment days and times.",
+      "description": "Represents the configuration for available museum appointment days and times.",
+      "properties": {
+        "days": {
+          "type": "object",
+          "properties": {
+            "monday": {"$ref": "#/entities/DayConfiguration"},
+            "tuesday": {"$ref": "#/entities/DayConfiguration"},
+            "wednesday": {"$ref": "#/entities/DayConfiguration"},
+            "thursday": {"$ref": "#/entities/DayConfiguration"},
+            "friday": {"$ref": "#/entities/DayConfiguration"},
+            "saturday": {"$ref": "#/entities/DayConfiguration"},
+            "sunday": {"$ref": "#/entities/DayConfiguration"}
+          }
+        }
+      },
+      "required": ["days"]
+    },
+    "LicenseScheduleConfiguration": {
+      "title": "LicenseScheduleConfiguration",
+      "type": "object",
+      "description": "Represents the configuration for available driver's license appointment days and times.",
       "properties": {
         "days": {
           "type": "object",
@@ -182,7 +225,7 @@
           "schema": {
             "$ref": "#/backend/entities/Appointment"
           },
-          "description": "Stores all appointments from all users. This allows admins to query all appointments easily.",
+          "description": "Stores all museum appointments from all users. Access should be restricted to 'manzano_admin' role.",
           "params": [
             {
               "name": "appointmentId",
@@ -192,13 +235,22 @@
         }
       },
       {
+        "path": "/licenseAppointments/{licenseAppointmentId}",
+        "definition": {
+          "entityName": "LicenseAppointment",
+          "schema": { "$ref": "#/backend/entities/LicenseAppointment" },
+          "description": "Stores all driver's license appointments. Access should be restricted to 'license_admin' role.",
+          "params": [{"name": "licenseAppointmentId", "description": "The unique identifier of the license appointment."}]
+        }
+      },
+      {
         "path": "/scheduleConfigurations/{scheduleConfigurationId}",
         "definition": {
           "entityName": "ScheduleConfiguration",
           "schema": {
             "$ref": "#/backend/entities/ScheduleConfiguration"
           },
-          "description": "Stores configurations for available appointment days and times. Access should be restricted to administrators.",
+          "description": "Stores configurations for available museum appointment days and times. Access should be restricted to 'manzano_admin' role.",
           "params": [
             {
               "name": "scheduleConfigurationId",
@@ -206,8 +258,17 @@
             }
           ]
         }
+      },
+      {
+        "path": "/licenseScheduleConfigurations/{licenseScheduleConfigurationId}",
+        "definition": {
+          "entityName": "LicenseScheduleConfiguration",
+          "schema": { "$ref": "#/backend/entities/LicenseScheduleConfiguration" },
+          "description": "Stores configurations for available driver's license appointment times. Access should be restricted to 'license_admin' role.",
+          "params": [{"name": "licenseScheduleConfigurationId", "description": "The unique identifier for the license schedule configuration."}]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed for clarity and security. User data is separated. Appointments are stored in a top-level collection to allow for easy querying by administrators, while public users can write to it. Schedule configurations are global and should be write-restricted to admins."
+    "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is central. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles."
   }
 }

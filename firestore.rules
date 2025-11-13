@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -12,13 +13,25 @@ service cloud.firestore {
 
     match /appointments/{appointmentId} {
       allow create: if true;
-      allow read, list: if true;
-      allow update, delete: if request.auth != null;
+      allow read, list: if request.auth != null; // To be refined with roles
+      allow update, delete: if request.auth != null; // To be refined with roles
     }
 
     match /scheduleConfigurations/{scheduleId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null; // To be refined with roles
+    }
+
+    // Rules for new license module
+    match /licenseAppointments/{licenseAppointmentId} {
+      allow create: if true;
+      allow read, list: if request.auth != null; // To be refined with roles
+      allow update, delete: if request.auth != null; // To be refined with roles
+    }
+
+    match /licenseScheduleConfigurations/{licenseScheduleId} {
+      allow read: if true;
+      allow write: if request.auth != null; // To be refined with roles
     }
   }
 }

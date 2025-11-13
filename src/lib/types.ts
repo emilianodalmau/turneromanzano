@@ -55,6 +55,28 @@ export interface User {
   dni: string;
   phone: string;
   email: string;
+  role: 'manzano_admin' | 'license_admin' | 'super_admin';
 }
 
+
+export interface LicenseAppointment extends Omit<MutableLicenseAppointment, 'id'> {
+  readonly id: string;
+}
+
+export interface MutableLicenseAppointment {
+  id: string;
+  userId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  procedureType: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  createdAt: string;
+}
+
+export interface LicenseScheduleConfiguration {
+    days: {
+        [key in DayKey]: DayConfiguration;
+    };
+}
     
