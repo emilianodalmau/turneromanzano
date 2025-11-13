@@ -4,6 +4,8 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
+import { User as AppUser } from '@/lib/types';
+import { User as FirebaseAuthUser } from 'firebase/auth';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -48,3 +50,15 @@ export * from './non-blocking-updates';
 export * from './non-blocking-login';
 export * from './errors';
 export * from './error-emitter';
+
+// Re-exporting the hook result types from provider.
+export type { UserHookResult } from './provider';
+
+// Define the custom useUser hook that returns both Firebase Auth user and Firestore profile.
+import { useFirebase } from './provider';
+export const useUser: () => { 
+    user: FirebaseAuthUser | null; 
+    profile: AppUser | null; 
+    isUserLoading: boolean; 
+    userError: Error | null; 
+} = useFirebase;

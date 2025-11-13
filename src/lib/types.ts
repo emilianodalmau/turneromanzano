@@ -1,3 +1,4 @@
+'use client';
 
 export type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
@@ -55,7 +56,7 @@ export interface User {
   dni: string;
   phone: string;
   email: string;
-  role: 'manzano_admin' | 'license_admin' | 'super_admin';
+  role?: 'manzano_admin' | 'license_admin' | 'super_admin';
 }
 
 
@@ -79,4 +80,3 @@ export interface LicenseScheduleConfiguration {
         [key in DayKey]: DayConfiguration;
     };
 }
-    

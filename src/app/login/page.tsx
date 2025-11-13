@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { UserCredential } from 'firebase/auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
+  const firestore = getFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
 
@@ -28,14 +31,39 @@ export default function LoginPage() {
     }
     initiateEmailSignIn(auth, email, password);
   };
-
-  const handleSignUp = () => {
+  
+  const handleSignUp = async () => {
     if (!email || !password) {
       alert('Por favor, ingresa un correo y contraseña para registrarte.');
       return;
     }
-    initiateEmailSignUp(auth, email, password);
+
+    try {
+      // We are not using the non-blocking version here because we need the user credential
+      // to create the user profile document.
+      const userCredential: UserCredential = await initiateEmailSignUp(auth, email, password);
+      const user = userCredential.user;
+
+      if (user) {
+        // Create a user profile document in Firestore
+        const userDocRef = doc(firestore, 'users', user.uid);
+        await setDoc(userDocRef, {
+          id: user.uid,
+          email: user.email,
+          role: 'manzano_admin', // Assign a default role
+          name: '',
+          lastName: '',
+          dni: '',
+          phone: '',
+        });
+        // The onAuthStateChanged listener in the provider will handle the redirect.
+      }
+    } catch (error: any) {
+        console.error("Sign up error:", error);
+        alert(`Error al registrarse: ${error.message}`);
+    }
   };
+
 
   if (isUserLoading || user) {
     return (

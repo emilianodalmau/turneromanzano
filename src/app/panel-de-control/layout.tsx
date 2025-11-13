@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
-import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket } from 'lucide-react';
+import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket, ShieldCheck } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,7 +14,7 @@ export default function PanelDeControlLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isUserLoading } = useUser();
+  const { user, profile, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -28,8 +28,12 @@ export default function PanelDeControlLayout({
   if (isUserLoading || !user) {
     return <div className="flex items-center justify-center min-h-screen">Cargando...</div>;
   }
+  
+  const userRole = profile?.role;
 
   const getTitleForPath = (path: string) => {
+    if (path.includes('/configuracion-de-agenda-licencias')) return 'Agenda Licencias';
+    if (path.includes('/turnos-licencias')) return 'Gestión de Licencias';
     if (path.includes('/configuracion-de-agenda')) return 'Configuración de Agenda';
     if (path.includes('/configuracion')) return 'Configuración';
     if (path.includes('/turnos')) return 'Gestion de Turnos';
@@ -54,26 +58,57 @@ export default function PanelDeControlLayout({
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-             <SidebarMenuItem>
-               <Link href="/panel-de-control/configuracion-de-agenda">
-                <SidebarMenuButton asChild tooltip="Configuración de Agenda" isActive={pathname.startsWith('/panel-de-control/configuracion-de-agenda')}>
-                  <span>
-                    <CalendarDays />
-                    <span>Agenda</span>
-                  </span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-               <Link href="/panel-de-control/turnos">
-                <SidebarMenuButton asChild tooltip="Gestión de Turnos" isActive={pathname.startsWith('/panel-de-control/turnos')}>
-                  <span>
-                    <Ticket />
-                    <span>Turnos</span>
-                  </span>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
+
+            {(userRole === 'manzano_admin' || userRole === 'super_admin') && (
+              <>
+                <SidebarMenuItem>
+                  <Link href="/panel-de-control/configuracion-de-agenda">
+                    <SidebarMenuButton asChild tooltip="Agenda Museo" isActive={pathname.startsWith('/panel-de-control/configuracion-de-agenda')}>
+                      <span>
+                        <CalendarDays />
+                        <span>Agenda Museo</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <Link href="/panel-de-control/turnos">
+                    <SidebarMenuButton asChild tooltip="Turnos Museo" isActive={pathname.startsWith('/panel-de-control/turnos')}>
+                      <span>
+                        <Ticket />
+                        <span>Turnos Museo</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              </>
+            )}
+
+            {(userRole === 'license_admin' || userRole === 'super_admin') && (
+               <>
+                <SidebarMenuItem>
+                  <Link href="/panel-de-control/configuracion-de-agenda-licencias">
+                    <SidebarMenuButton asChild tooltip="Agenda Licencias" isActive={pathname.startsWith('/panel-de-control/configuracion-de-agenda-licencias')}>
+                      <span>
+                        <CalendarDays />
+                        <span>Agenda Licencias</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <Link href="/panel-de-control/turnos-licencias">
+                    <SidebarMenuButton asChild tooltip="Turnos Licencias" isActive={pathname.startsWith('/panel-de-control/turnos-licencias')}>
+                      <span>
+                        <ShieldCheck />
+                        <span>Turnos Licencias</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              </>
+            )}
+
           </SidebarMenu>
 
           <div className="p-2 border-t border-sidebar-border">
