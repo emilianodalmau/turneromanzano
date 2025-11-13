@@ -32,6 +32,7 @@ export default function PanelDeControlLayout({
   const userRole = profile?.role;
 
   const getTitleForPath = (path: string) => {
+    if (path.includes('/mi-perfil')) return 'Mi Perfil';
     if (path.includes('/configuracion-de-agenda-licencias')) return 'Agenda Licencias';
     if (path.includes('/turnos-licencias')) return 'Gestión de Licencias';
     if (path.includes('/configuracion-de-agenda')) return 'Configuración de Agenda';
@@ -108,7 +109,16 @@ export default function PanelDeControlLayout({
                 </SidebarMenuItem>
               </>
             )}
-
+             <SidebarMenuItem>
+                <Link href="/panel-de-control/mi-perfil">
+                  <SidebarMenuButton asChild tooltip="Mi Perfil" isActive={pathname === '/panel-de-control/mi-perfil'}>
+                    <span>
+                      <UserIcon />
+                      <span>Mi Perfil</span>
+                    </span>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
           </SidebarMenu>
 
           <div className="p-2 border-t border-sidebar-border">
