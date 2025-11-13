@@ -106,7 +106,6 @@ export default function TurnosPage() {
     });
 
     setAvailableSlots(available);
-    form.setValue('timeSlot', '');
 
   }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form]);
 
@@ -376,5 +375,3 @@ export default function TurnosPage() {
     </div>
   );
 }
-
-    
