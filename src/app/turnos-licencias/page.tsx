@@ -41,6 +41,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
 export default function TurnosLicenciasPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -73,7 +75,6 @@ export default function TurnosLicenciasPage() {
   });
 
   const selectedDate = form.watch('date');
-  const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
   useEffect(() => {
     if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
@@ -102,7 +103,7 @@ export default function TurnosLicenciasPage() {
 
     setAvailableSlots(available);
     
-  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form, dayNamesInEnglish]);
+  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading]);
 
 
   async function onSubmit(data: FormValues) {
