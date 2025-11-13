@@ -19,7 +19,7 @@ import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, u
 import { collection, doc } from 'firebase/firestore';
 import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { AlertCircle, CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -27,6 +27,7 @@ import { es } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
@@ -83,8 +84,11 @@ export default function TurnosLicenciasPage() {
       setAvailableSlots([]);
       return;
     }
-
-    const allAppointments: LicenseAppointment[] = []; // Assume no appointments for public user
+    
+    // In a real-world scenario for a public page, you would fetch only available slots from a backend function
+    // instead of fetching all appointments to calculate availability on the client.
+    // For this implementation, we assume we can calculate it based on capacity alone, without checking existing appointments.
+    const allAppointments: LicenseAppointment[] = [];
     const appointmentsOnSelectedDate = allAppointments.filter(
       (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
     );
@@ -166,6 +170,22 @@ export default function TurnosLicenciasPage() {
           <CardDescription>Completa el formulario para solicitar tu turno. Asegúrate de conocer los requisitos para tu trámite.</CardDescription>
         </CardHeader>
         <CardContent>
+            <div className="space-y-4 mb-8">
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="font-bold">RECUERDE</AlertTitle>
+                    <AlertDescription>
+                        Solo podrán realizar el trámite las personas que posean domicilio en el departamento de Tunuyán y con el último ejemplar de su D.N.I.
+                    </AlertDescription>
+                </Alert>
+                <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="font-bold">INFORMACIÓN IMPORTANTE - LEY 24449 - ARTÍCULO 18</AlertTitle>
+                    <AlertDescription>
+                        Todo ciudadano que realice modificaciones de Datos en su DOCUMENTO NACIONAL DE IDENTIDAD debe actualizar los mismos en su licencia de conducir, en un plazo no superior a 90 DÍAS de realizada la edición del mismo. La licencia CADUCA A LOS 90 DÍAS de producido el cambio no denunciado.
+                    </AlertDescription>
+                </Alert>
+            </div>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="space-y-4">
