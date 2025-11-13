@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -52,14 +52,8 @@ export default function TurnosLicenciasPage() {
     () => (firestore ? doc(firestore, 'licenseScheduleConfigurations', 'default') : null),
     [firestore]
   );
-
-  const appointmentsCollectionRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'licenseAppointments') : null),
-    [firestore]
-  );
   
   const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<LicenseScheduleConfiguration>(scheduleRef);
-  const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<LicenseAppointment>(appointmentsCollectionRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -77,7 +71,7 @@ export default function TurnosLicenciasPage() {
   const selectedDate = form.watch('date');
 
   useEffect(() => {
-    if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
+    if (!selectedDate || !scheduleConfig) {
       setAvailableSlots([]);
       return;
     }
@@ -90,7 +84,8 @@ export default function TurnosLicenciasPage() {
       return;
     }
 
-    const appointmentsOnSelectedDate = (allAppointments || []).filter(
+    const allAppointments: LicenseAppointment[] = []; // Assume no appointments for public user
+    const appointmentsOnSelectedDate = allAppointments.filter(
       (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
     );
 
@@ -103,7 +98,7 @@ export default function TurnosLicenciasPage() {
 
     setAvailableSlots(available);
     
-  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading]);
+  }, [selectedDate, scheduleConfig]);
 
 
   async function onSubmit(data: FormValues) {
@@ -267,7 +262,7 @@ export default function TurnosLicenciasPage() {
                                     </SelectContent>
                                 </Select>
                                 {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
-                                {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
+                                {selectedDate && availableSlots.length === 0 && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
                                 <FormMessage />
                                 </FormItem>
                             )}
