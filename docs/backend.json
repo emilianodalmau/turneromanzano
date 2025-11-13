@@ -127,7 +127,15 @@
         "endTime": { "type": "string" },
         "procedureType": { "type": "string", "description": "The type of license procedure (e.g., new, renewal)." },
         "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "documents": {
+          "type": "object",
+          "description": "A map of document IDs to their download URLs in Firebase Storage.",
+          "additionalProperties": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
       },
       "required": ["id", "userId", "date", "startTime", "endTime", "procedureType", "status", "createdAt"]
     },

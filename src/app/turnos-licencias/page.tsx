@@ -19,7 +19,7 @@ import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, u
 import { collection, doc } from 'firebase/firestore';
 import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle } from 'lucide-react';
+import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -29,9 +29,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { uploadFile } from '@/firebase/storage';
 
 // --- ZOD SCHEMA ---
-const fileSchema = z.any().optional();
+const fileSchema = z.instanceof(File, { message: 'Se requiere el archivo.' }).optional();
 
 // Construye un esquema de Zod dinámicamente para los documentos
 const documentsSchema = z.object(
@@ -40,12 +41,21 @@ const documentsSchema = z.object(
       if ('category' in docOrCategory) {
         docOrCategory.docs.forEach(doc => {
           if (!doc.isLink) {
-            acc[doc.id] = fileSchema;
+             // Solo añade al esquema si no es opcional
+            if (!doc.optional) {
+              acc[doc.id] = z.instanceof(File, { message: `Se requiere ${doc.label}.` });
+            } else {
+              acc[doc.id] = fileSchema;
+            }
           }
         });
       } else {
         if (!docOrCategory.isLink) {
-          acc[docOrCategory.id] = fileSchema;
+           if (!docOrCategory.optional) {
+            acc[docOrCategory.id] = z.instanceof(File, { message: `Se requiere ${docOrCategory.label}.` });
+          } else {
+            acc[docOrCategory.id] = fileSchema;
+          }
         }
       }
     });
@@ -79,10 +89,19 @@ const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday',
 // --- FILE INPUT COMPONENT ---
 const FileInput = React.forwardRef<
   HTMLInputElement,
-  ControllerRenderProps<FormValues, any>
->((props, ref) => {
-  const { name, onBlur, onChange } = props;
+  {
+    value?: File | null;
+    onChange: (file: File | null) => void;
+    name: string;
+    onBlur: () => void;
+  }
+>(({ value, onChange, name, onBlur }, ref) => {
   const [fileName, setFileName] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFileName(value?.name || null);
+  }, [value]);
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,9 +147,8 @@ FileInput.displayName = "FileInput";
 
 
 // --- DOCUMENTS FORM SECTION ---
-function DocumentsFormSection() {
-    const form = useForm<FormValues>();
-    const procedureTypeId = useWatch({ control: form.control, name: 'procedureType' });
+function DocumentsFormSection({ control }: { control: any }) {
+    const procedureTypeId = useWatch({ control, name: 'procedureType' });
 
     const selectedProcedure = useMemo(
         () => procedureTypes.find((p) => p.id === procedureTypeId),
@@ -158,7 +176,7 @@ function DocumentsFormSection() {
         return (
             <FormField
                 key={doc.id}
-                control={form.control}
+                control={control}
                 name={`documents.${doc.id}` as any}
                 render={({ field }) => (
                     <FormItem>
@@ -202,6 +220,7 @@ export default function TurnosLicenciasPage() {
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const scheduleRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'licenseScheduleConfigurations', 'default') : null),
@@ -226,10 +245,12 @@ export default function TurnosLicenciasPage() {
       dni: '',
       procedureType: '',
       timeSlot: '',
+      documents: {},
     },
   });
 
   const selectedDate = form.watch('date');
+  const procedureType = form.watch('procedureType');
 
   useEffect(() => {
     if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
@@ -273,23 +294,33 @@ export default function TurnosLicenciasPage() {
         toast({ variant: 'destructive', title: 'Error', description: 'El horario seleccionado ya no está disponible.' });
         return;
     }
+    setIsSubmitting(true);
 
     try {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
 
-        // TODO: Handle file uploads to Firebase Storage in a future phase
-        // For now, we just save the appointment data without document URLs
+        const uploadedDocuments: Record<string, string> = {};
+        if (data.documents) {
+            for (const docId in data.documents) {
+                const file = data.documents[docId as keyof typeof data.documents];
+                if (file instanceof File) {
+                    const filePath = `license-documents/${userId}/${procedureType}/${file.name}`;
+                    const downloadURL = await uploadFile(file, filePath);
+                    uploadedDocuments[docId] = downloadURL;
+                }
+            }
+        }
 
         const newAppointmentRequest = {
             userId: userId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
-            procedureType: data.procedureType,
+            procedureType: procedureTypes.find(p => p.id === data.procedureType)?.name || data.procedureType,
             status: 'pending' as const,
             createdAt: new Date().toISOString(),
-            documents: {}, // Will be populated with URLs later
+            documents: uploadedDocuments,
         };
 
         const appointmentsCollection = collection(firestore, 'licenseAppointments');
@@ -322,6 +353,8 @@ export default function TurnosLicenciasPage() {
             title: 'Error',
             description: 'No se pudo enviar la solicitud. Por favor, inténtalo de nuevo.',
         });
+    } finally {
+        setIsSubmitting(false);
     }
 }
 
@@ -334,6 +367,31 @@ export default function TurnosLicenciasPage() {
   const nextStep = async () => {
     const fieldsToValidate = steps[currentStep].fields;
     const isValid = await form.trigger(fieldsToValidate);
+
+    // Special validation for documents on step 3
+    if (currentStep === 2 && procedureType) {
+        const selectedProcedure = procedureTypes.find(p => p.id === procedureType);
+        if (selectedProcedure) {
+            let allDocsValid = true;
+            const checkDocs = (docs: (DocumentRequirement | {category: string, docs: DocumentRequirement[]})[]) => {
+                for (const item of docs) {
+                    if ('category' in item) {
+                        checkDocs(item.docs);
+                    } else if (!item.optional && !item.isLink) {
+                        const docFile = form.getValues(`documents.${item.id}` as any);
+                        if (!docFile) {
+                            form.setError(`documents.${item.id}` as any, { type: 'required', message: `Se requiere ${item.label}.` });
+                            allDocsValid = false;
+                        }
+                    }
+                }
+            }
+            checkDocs(selectedProcedure.docs);
+            if (!allDocsValid) return;
+        }
+    }
+
+
     if (isValid) {
       setCurrentStep(s => Math.min(s + 1, steps.length - 1));
     }
@@ -515,14 +573,14 @@ export default function TurnosLicenciasPage() {
                                 </FormItem>
                             )}
                         />
-                        <DocumentsFormSection />
+                        <DocumentsFormSection control={form.control} />
                     </div>
                 )}
 
 
                 <div className="flex justify-between gap-4 pt-4">
                     {currentStep > 0 ? (
-                        <Button type="button" variant="outline" onClick={prevStep}>
+                        <Button type="button" variant="outline" onClick={prevStep} disabled={isSubmitting}>
                             <ChevronLeft className="w-4 h-4 mr-2" />
                             Anterior
                         </Button>
@@ -534,9 +592,18 @@ export default function TurnosLicenciasPage() {
                             <ChevronRight className="w-4 h-4 ml-2" />
                         </Button>
                     ) : (
-                        <Button type="submit">
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                            Enviar Solicitud
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Enviando...
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Enviar Solicitud
+                                </>
+                            )}
                         </Button>
                     )}
                 </div>
@@ -547,5 +614,3 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
-
-    
