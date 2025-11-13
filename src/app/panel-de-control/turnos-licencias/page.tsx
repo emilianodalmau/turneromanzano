@@ -82,30 +82,28 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
     const { data: userData, isLoading: isUserLoading } = useDoc<User>(userRef);
     const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<LicenseAppointment>(appointmentsCollectionRef);
     
+    const defaultValues = useMemo(() => ({
+        name: userData?.name || '',
+        lastName: userData?.lastName || '',
+        dni: userData?.dni || '',
+        email: userData?.email || '',
+        phone: userData?.phone || '',
+        procedureType: appointment.procedureType,
+        date: new Date(appointment.date + 'T00:00:00'),
+        timeSlot: appointment.startTime,
+        status: appointment.status,
+    }), [appointment, userData]);
+
     const form = useForm<EditFormValues>({
         resolver: zodResolver(editFormSchema),
-        defaultValues: {
-            name: '',
-            lastName: '',
-            dni: '',
-            email: '',
-            phone: '',
-            procedureType: appointment.procedureType,
-            date: new Date(appointment.date + 'T00:00:00'),
-            timeSlot: appointment.startTime,
-            status: appointment.status,
-        },
+        defaultValues
     });
     
     useEffect(() => {
-        if (userData) {
-            form.setValue('name', userData.name);
-            form.setValue('lastName', userData.lastName);
-            form.setValue('dni', userData.dni);
-            form.setValue('email', userData.email);
-            form.setValue('phone', userData.phone);
+        if(userData) {
+            form.reset(defaultValues);
         }
-    }, [userData, form.setValue]);
+    }, [userData, defaultValues, form]);
 
 
     const selectedDate = form.watch('date');

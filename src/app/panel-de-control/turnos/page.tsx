@@ -81,28 +81,28 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
     const { data: userData, isLoading: isUserLoading } = useDoc<User>(userRef);
     const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsCollectionRef);
 
+    const defaultValues = useMemo(() => ({
+        responsibleName: appointment.responsibleName,
+        schoolName: appointment.schoolName,
+        visitorCount: appointment.visitorCount,
+        date: new Date(appointment.date + 'T00:00:00'),
+        timeSlot: appointment.startTime,
+        status: appointment.status,
+        dni: userData?.dni || '',
+        email: userData?.email || '',
+        phone: userData?.phone || '',
+    }), [appointment, userData]);
+
     const form = useForm<EditFormValues>({
         resolver: zodResolver(editFormSchema),
-        defaultValues: {
-            responsibleName: appointment.responsibleName,
-            schoolName: appointment.schoolName,
-            visitorCount: appointment.visitorCount,
-            date: new Date(appointment.date + 'T00:00:00'),
-            timeSlot: appointment.startTime,
-            status: appointment.status,
-            dni: '',
-            email: '',
-            phone: '',
-        },
+        defaultValues,
     });
     
     useEffect(() => {
         if (userData) {
-            form.setValue('dni', userData.dni);
-            form.setValue('email', userData.email);
-            form.setValue('phone', userData.phone);
+            form.reset(defaultValues);
         }
-    }, [userData, form.setValue]);
+    }, [userData, defaultValues, form]);
 
 
     const selectedDate = form.watch('date');
