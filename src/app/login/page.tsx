@@ -50,7 +50,7 @@ export default function LoginPage() {
         await setDoc(userDocRef, {
           id: user.uid,
           email: user.email,
-          role: 'manzano_admin', // Assign a default role
+          role: 'license_admin', // Assign a default role
           name: '',
           lastName: '',
           dni: '',

@@ -12,6 +12,15 @@ export const dayNames: Record<DayKey, string> = {
   sunday: 'Domingo',
 };
 
+export const procedureTypes = [
+    { id: 'original', name: 'Original' },
+    { id: 'renovacion', name: 'Renovación' },
+    { id: 'ampliacion', name: 'Ampliación' },
+    { id: 'duplicado', name: 'Duplicado' },
+    { id: 'reemplazo', name: 'Reemplazo' },
+    { id: 'renovacion_con_ampliacion', name: 'Renovación con Ampliación' },
+];
+
 export interface TimeSlot {
   startTime: string;
   endTime: string;

@@ -16,7 +16,10 @@ export default function Home() {
             <Button>Iniciar Sesión</Button>
           </Link>
           <Link href="/turnos" passHref>
-            <Button variant="outline">Turnos</Button>
+            <Button variant="outline">Turnos Museo</Button>
+          </Link>
+           <Link href="/turnos-licencias" passHref>
+            <Button variant="outline">Turnos Licencias</Button>
           </Link>
         </div>
       </div>
