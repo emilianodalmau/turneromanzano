@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,6 +113,9 @@ export default function LoginPage() {
           <Button onClick={handleSignUp} variant="outline" className="w-full">
             Registrarse
           </Button>
+           <Link href="/" passHref className="w-full">
+             <Button variant="link" className="w-full">Volver al Inicio</Button>
+           </Link>
         </CardFooter>
       </Card>
     </div>
