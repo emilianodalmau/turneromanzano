@@ -25,7 +25,7 @@ service cloud.firestore {
     // Rules for new license module
     match /licenseAppointments/{licenseAppointmentId} {
       allow create: if true;
-      allow read, list: if request.auth != null; // To be refined with roles
+      allow read, list: if true; // Allow public read for availability check
       allow update, delete: if request.auth != null; // To be refined with roles
     }
 
