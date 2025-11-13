@@ -101,8 +101,7 @@ export default function TurnosLicenciasPage() {
     });
 
     setAvailableSlots(available);
-    form.setValue('timeSlot', '');
-
+    
   }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form, dayNamesInEnglish]);
 
 
