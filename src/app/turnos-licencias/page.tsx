@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch, useFormContext, ControllerRenderProps } from 'react-hook-form';
+import { useForm, useWatch, ControllerRenderProps } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,9 +15,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
-import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, ProcedureType, DocumentRequirement } from '@/lib/types';
+import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -33,30 +33,25 @@ import { Progress } from '@/components/ui/progress';
 // --- ZOD SCHEMA ---
 const fileSchema = z.any().optional();
 
-const documentsSchema = z.object({
-  dni: fileSchema,
-  cuil: fileSchema,
-  cursos: fileSchema,
-  certificado_medico_opcional: fileSchema,
-  tarjeta_verde: fileSchema,
-  poliza_seguro: fileSchema,
-  licencia_acompanante: fileSchema,
-  licencia_actual: fileSchema,
-  curso_nacional: fileSchema,
-  certificado_reincidencia: fileSchema,
-  analisis_sangre: fileSchema,
-  informe_vision: fileSchema,
-  informe_psicologico: fileSchema,
-  informe_audiometria: fileSchema,
-  electroencefalograma: fileSchema,
-  examen_clinico_laboral: fileSchema,
-  apto_medico_tratante_opcional: fileSchema,
-  analisis_sangre_apto: fileSchema,
-  electrocardiograma_apto: fileSchema,
-  nota_inhabilitacion: fileSchema,
-  cursos_rehabilitacion: fileSchema,
-  licencia_acompanante_rehab: fileSchema,
-}).optional();
+// Construye un esquema de Zod dinámicamente para los documentos
+const documentsSchema = z.object(
+  procedureTypes.reduce((acc, procedure) => {
+    procedure.docs.forEach(docOrCategory => {
+      if ('category' in docOrCategory) {
+        docOrCategory.docs.forEach(doc => {
+          if (!doc.isLink) {
+            acc[doc.id] = fileSchema;
+          }
+        });
+      } else {
+        if (!docOrCategory.isLink) {
+          acc[docOrCategory.id] = fileSchema;
+        }
+      }
+    });
+    return acc;
+  }, {} as Record<string, z.ZodTypeAny>)
+).optional();
 
 
 const formSchema = z.object({
@@ -82,53 +77,60 @@ const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday',
 
 
 // --- FILE INPUT COMPONENT ---
-const FileInput = React.forwardRef<HTMLInputElement, ControllerRenderProps<FormValues, any>>((field, ref) => {
-    const [fileName, setFileName] = useState<string | null>(null);
+const FileInput = React.forwardRef<
+  HTMLInputElement,
+  ControllerRenderProps<FormValues, any>
+>((props, ref) => {
+  const { name, onBlur, onChange } = props;
+  const [fileName, setFileName] = useState<string | null>(null);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setFileName(file.name);
-            field.onChange(file); // Pass the file object to react-hook-form
-        } else {
-            setFileName(null);
-            field.onChange(null);
-        }
-    };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileName(file.name);
+      onChange(file); // Pass the file object to react-hook-form
+    } else {
+      setFileName(null);
+      onChange(null);
+    }
+  };
 
-    return (
-         <div className="flex items-center space-x-2">
-            <label htmlFor={field.name} className="flex-1 cursor-pointer">
-                <div className="flex items-center justify-center w-full px-4 py-2 text-sm border rounded-md hover:bg-muted">
-                    <Upload className="w-4 h-4 mr-2" />
-                    <span>{fileName ? 'Cambiar archivo' : 'Seleccionar archivo'}</span>
-                </div>
-                <input
-                    id={field.name}
-                    type="file"
-                    className="sr-only"
-                    ref={ref}
-                    name={field.name}
-                    onBlur={field.onBlur}
-                    onChange={handleFileChange}
-                />
-            </label>
-            {fileName && (
-                 <div className="flex items-center text-sm text-green-600">
-                    <FileText className="w-4 h-4 mr-1" />
-                    <span className="truncate max-w-xs">{fileName}</span>
-                 </div>
-            )}
+  return (
+    <div className="flex items-center space-x-2">
+      <label
+        htmlFor={name}
+        className="flex-1 cursor-pointer"
+      >
+        <div className="flex items-center justify-center w-full px-4 py-2 text-sm border rounded-md hover:bg-muted">
+          <Upload className="w-4 h-4 mr-2" />
+          <span>{fileName ? 'Cambiar archivo' : 'Seleccionar archivo'}</span>
         </div>
-    );
+        <input
+          id={name}
+          type="file"
+          className="sr-only"
+          ref={ref}
+          name={name}
+          onBlur={onBlur}
+          onChange={handleFileChange}
+        />
+      </label>
+      {fileName && (
+        <div className="flex items-center text-sm text-green-600">
+          <FileText className="w-4 h-4 mr-1 flex-shrink-0" />
+          <span className="truncate max-w-[150px]">{fileName}</span>
+        </div>
+      )}
+    </div>
+  );
 });
 FileInput.displayName = "FileInput";
 
 
 // --- DOCUMENTS FORM SECTION ---
 function DocumentsFormSection() {
-    const { control } = useFormContext<FormValues>();
-    const procedureTypeId = useWatch({ control, name: 'procedureType' });
+    const form = useForm<FormValues>();
+    const procedureTypeId = useWatch({ control: form.control, name: 'procedureType' });
 
     const selectedProcedure = useMemo(
         () => procedureTypes.find((p) => p.id === procedureTypeId),
@@ -156,7 +158,7 @@ function DocumentsFormSection() {
         return (
             <FormField
                 key={doc.id}
-                control={control}
+                control={form.control}
                 name={`documents.${doc.id}` as any}
                 render={({ field }) => (
                     <FormItem>
@@ -164,7 +166,7 @@ function DocumentsFormSection() {
                             <FormLabel>{doc.label} {doc.optional && <span className="text-xs text-muted-foreground">(Opcional)</span>}</FormLabel>
                          </div>
                         <FormControl>
-                            <FileInput {...field} />
+                           <FileInput {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -206,7 +208,13 @@ export default function TurnosLicenciasPage() {
     [firestore]
   );
   
+  const appointmentsCollectionRef = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'licenseAppointments') : null),
+    [firestore]
+  );
+  
   const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<LicenseScheduleConfiguration>(scheduleRef);
+  const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<LicenseAppointment>(appointmentsCollectionRef);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -224,7 +232,7 @@ export default function TurnosLicenciasPage() {
   const selectedDate = form.watch('date');
 
   useEffect(() => {
-    if (!selectedDate || !scheduleConfig) {
+    if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
       setAvailableSlots([]);
       return;
     }
@@ -237,8 +245,7 @@ export default function TurnosLicenciasPage() {
       return;
     }
     
-    const allAppointments: LicenseAppointment[] = [];
-    const appointmentsOnSelectedDate = allAppointments.filter(
+    const appointmentsOnSelectedDate = (allAppointments || []).filter(
       (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
     );
 
@@ -252,7 +259,7 @@ export default function TurnosLicenciasPage() {
     setAvailableSlots(available);
     form.setValue('timeSlot', '');
     
-  }, [selectedDate, scheduleConfig, form]);
+  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form]);
 
 
   async function onSubmit(data: FormValues) {
@@ -271,14 +278,18 @@ export default function TurnosLicenciasPage() {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
 
-        const newAppointmentRequest: Omit<MutableLicenseAppointment, 'id'> = {
+        // TODO: Handle file uploads to Firebase Storage in a future phase
+        // For now, we just save the appointment data without document URLs
+
+        const newAppointmentRequest = {
             userId: userId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
             procedureType: data.procedureType,
-            status: 'pending',
+            status: 'pending' as const,
             createdAt: new Date().toISOString(),
+            documents: {}, // Will be populated with URLs later
         };
 
         const appointmentsCollection = collection(firestore, 'licenseAppointments');
@@ -291,6 +302,7 @@ export default function TurnosLicenciasPage() {
             dni: data.dni,
             phone: data.phone,
             email: data.email,
+            role: 'license_admin' as const,
         };
         
         if (appointmentDocRef) {
@@ -314,13 +326,13 @@ export default function TurnosLicenciasPage() {
 }
 
   const steps = [
-    { name: 'Turno', fields: ['date', 'timeSlot'] },
-    { name: 'Datos Personales', fields: ['name', 'lastName', 'email', 'phone', 'dni'] },
-    { name: 'Trámite y Documentos', fields: ['procedureType', 'documents'] },
+    { name: 'Turno', fields: ['date', 'timeSlot'] as const },
+    { name: 'Datos Personales', fields: ['name', 'lastName', 'email', 'phone', 'dni'] as const },
+    { name: 'Trámite y Documentos', fields: ['procedureType', 'documents'] as const },
   ];
 
   const nextStep = async () => {
-    const fieldsToValidate = steps[currentStep].fields as (keyof FormValues)[];
+    const fieldsToValidate = steps[currentStep].fields;
     const isValid = await form.trigger(fieldsToValidate);
     if (isValid) {
       setCurrentStep(s => Math.min(s + 1, steps.length - 1));
@@ -429,8 +441,8 @@ export default function TurnosLicenciasPage() {
                                     ))}
                                     </SelectContent>
                                 </Select>
+                                {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground pt-1">No hay horarios disponibles para esta fecha.</p>}
                                 <FormMessage />
-                                {selectedDate && availableSlots.length === 0 && <p className="text-sm text-muted-foreground pt-1">No hay horarios disponibles para esta fecha.</p>}
                                 </FormItem>
                             )}
                         />
@@ -485,7 +497,7 @@ export default function TurnosLicenciasPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Tipo de Trámite</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Selecciona un trámite" />
@@ -514,7 +526,7 @@ export default function TurnosLicenciasPage() {
                             <ChevronLeft className="w-4 h-4 mr-2" />
                             Anterior
                         </Button>
-                    ) : <Link href="/" passHref><Button variant="outline">Cancelar</Button></Link>}
+                    ) : <Link href="/" passHref><Button type="button" variant="outline">Cancelar</Button></Link>}
                     
                     {currentStep < steps.length - 1 ? (
                         <Button type="button" onClick={nextStep}>
@@ -535,3 +547,5 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
+
+    
