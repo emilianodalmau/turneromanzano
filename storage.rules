@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permite la escritura (carga de archivos) únicamente en la carpeta 'license-documents'
+    // y sus subcarpetas. Esto es crucial para que el formulario público pueda subir los
+    // documentos requeridos para los trámites de licencia.
+    match /license-documents/{allPaths=**} {
+      allow write: if true;
+    }
+
+    // Por defecto, se deniega la lectura y escritura a cualquier otra ruta para
+    // mantener la seguridad del resto del bucket.
+    // Puedes añadir reglas más específicas aquí si necesitas que otras partes
+    // de tu aplicación usen Storage.
+    // match /other_path/{allPaths=**} {
+    //   allow read, write: if request.auth != null;
+    // }
+  }
+}
