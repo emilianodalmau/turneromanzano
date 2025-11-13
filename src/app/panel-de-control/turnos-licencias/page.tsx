@@ -105,7 +105,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
             form.setValue('email', userData.email);
             form.setValue('phone', userData.phone);
         }
-    }, [userData, form]);
+    }, [userData, form.setValue]);
 
 
     const selectedDate = form.watch('date');
@@ -136,7 +136,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
         });
 
         setAvailableSlots(available);
-    }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form, appointment.id]);
+    }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, appointment.id]);
 
     async function onSubmit(data: EditFormValues) {
         if (!firestore) return;
@@ -548,3 +548,5 @@ export default function TurnosLicenciasPage() {
 
     return <LicenseAppointmentList appointments={appointments || []} users={users || []} />;
 }
+
+    

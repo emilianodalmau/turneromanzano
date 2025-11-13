@@ -102,7 +102,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
             form.setValue('email', userData.email);
             form.setValue('phone', userData.phone);
         }
-    }, [userData, form]);
+    }, [userData, form.setValue]);
 
 
     const selectedDate = form.watch('date');
@@ -133,7 +133,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         });
 
         setAvailableSlots(available);
-    }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form, appointment.id]);
+    }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, appointment.id]);
 
     async function onSubmit(data: EditFormValues) {
         if (!firestore) return;
@@ -589,4 +589,5 @@ export default function GestionTurnosPage() {
     return <AppointmentList appointments={appointments || []} users={users || []} />;
 }
 
+    
     
