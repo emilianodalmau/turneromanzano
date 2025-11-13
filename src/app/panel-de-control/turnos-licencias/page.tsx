@@ -103,7 +103,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
         if(userData) {
             form.reset(defaultValues);
         }
-    }, [userData, defaultValues, form]);
+    }, [userData, defaultValues, form.reset]);
 
 
     const selectedDate = form.watch('date');

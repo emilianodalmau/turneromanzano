@@ -102,7 +102,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         if (userData) {
             form.reset(defaultValues);
         }
-    }, [userData, defaultValues, form]);
+    }, [userData, defaultValues, form.reset]);
 
 
     const selectedDate = form.watch('date');
