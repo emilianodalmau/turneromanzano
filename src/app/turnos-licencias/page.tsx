@@ -19,7 +19,7 @@ import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, u
 import { collection, doc } from 'firebase/firestore';
 import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -435,6 +435,29 @@ export default function TurnosLicenciasPage() {
                             <p>REQUISITOS: SABER LEER Y PARA LOS CONDUCTORES PROFESIONALES TAMBIÉN ESCRIBIR.</p>
                             <p className="mt-2 font-semibold">La seguridad vial es responsabilidad de todos los tunuyaninos</p>
                             <p className="text-sm">Municipalidad de Tunuyán.</p>
+                        </AlertDescription>
+                    </Alert>
+                    <Alert>
+                        <BookOpen className="h-4 w-4" />
+                        <AlertTitle className="font-bold">Materiales de Consulta</AlertTitle>
+                        <AlertDescription>
+                            <ul className="list-disc pl-5 mt-2 space-y-2">
+                                <li>
+                                    <a href="https://www.tunuyan.gov.ar/site/wp-content/uploads/2025/09/manual-del-conductor.-licencia-particular.pdf" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Materiales de consulta
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://www.tunuyan.gov.ar/site/wp-content/uploads/2022/12/Senalizacion.pdf" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Señalización de transito
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="http://curso.seguridadvial.gob.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Curso online
+                                    </a>
+                                </li>
+                            </ul>
                         </AlertDescription>
                     </Alert>
                 </div>
