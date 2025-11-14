@@ -37,7 +37,7 @@ const formSchema = z.object({
   phone: z.string().min(1, 'El teléfono es requerido.'),
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
-  schoolEmail: z.string().email('El email de la institución no es válido.').optional().or(z.literal('')),
+  schoolEmail: z.string().min(1, { message: "El email de la institución es requerido." }).email('El email de la institución no es válido.'),
   visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
@@ -214,7 +214,7 @@ export default function TurnosPage() {
                             name="schoolEmail"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Email de la institución (Opcional)</FormLabel>
+                                <FormLabel>Email de la institución</FormLabel>
                                 <FormControl>
                                     <Input type="email" placeholder="contacto@escuela.com" {...field} />
                                 </FormControl>
@@ -405,3 +405,5 @@ export default function TurnosPage() {
     </div>
   );
 }
+
+    
