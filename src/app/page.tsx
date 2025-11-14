@@ -21,6 +21,9 @@ export default function Home() {
            <Link href="/turnos-licencias" passHref>
             <Button variant="outline">Turnos Licencias</Button>
           </Link>
+          <Link href="/totem" passHref>
+            <Button variant="secondary">Totem de Atención</Button>
+          </Link>
         </div>
       </div>
     </div>
