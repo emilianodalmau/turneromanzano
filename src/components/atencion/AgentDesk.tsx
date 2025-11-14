@@ -54,16 +54,21 @@ export function AgentDesk({ desk, area, onExit }: AgentDeskProps) {
     const ticketsQuery = useMemoFirebase(
         () => firestore ? query(
             collection(firestore, 'queueTickets'),
-            where('areaId', '==', area.id),
-            where('status', 'in', ['waiting', 'called', 'attending']),
-            orderBy('createdAt', 'asc')
+            where('areaId', '==', area.id)
+            // Filters for status and ordering will be applied on the client side
         ) : null,
         [firestore, area.id]
     );
 
     const { data: tickets, isLoading } = useCollection<QueueTicket>(ticketsQuery);
 
-    const waitingTickets = useMemo(() => tickets?.filter(t => t.status === 'waiting') || [], [tickets]);
+    const waitingTickets = useMemo(() => {
+        if (!tickets) return [];
+        return tickets
+            .filter(t => t.status === 'waiting')
+            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }, [tickets]);
+    
     const calledTicket = useMemo(() => tickets?.find(t => t.status === 'called' && t.deskId === desk.id) || null, [tickets, desk.id]);
     const attendingTicket = useMemo(() => tickets?.find(t => t.status === 'attending' && t.deskId === desk.id) || null, [tickets, desk.id]);
     

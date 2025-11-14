@@ -46,7 +46,7 @@ service cloud.firestore {
     }
 
     match /queueTickets/{ticketId} {
-      allow list, read: if true; // Public read for screens, agent list
+      allow list, read: if request.auth != null; // Agents and screens can read/list tickets
       allow create: if true; // Public create for totem
       allow update: if request.auth != null; // Only agents can update
     }
