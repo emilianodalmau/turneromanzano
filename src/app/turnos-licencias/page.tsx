@@ -439,7 +439,7 @@ export default function TurnosLicenciasPage() {
                     </Alert>
                     <Alert>
                         <BookOpen className="h-4 w-4" />
-                        <AlertTitle className="font-bold">Materiales de Consulta</AlertTitle>
+                        <AlertTitle className="font-bold">Recursos y Enlaces Útiles</AlertTitle>
                         <AlertDescription>
                             <ul className="list-disc pl-5 mt-2 space-y-2">
                                 <li>
@@ -449,12 +449,37 @@ export default function TurnosLicenciasPage() {
                                 </li>
                                 <li>
                                     <a href="https://www.tunuyan.gov.ar/site/wp-content/uploads/2022/12/Senalizacion.pdf" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Señalización de transito
+                                        Señalización de tránsito
                                     </a>
                                 </li>
                                 <li>
                                     <a href="http://curso.seguridadvial.gob.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
                                         Curso online
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://boletadepago.seguridadvial.gob.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Descargar aranceles de boleto NACIONAL
+                                    </a>
+                                </li>
+                                 <li>
+                                    <a href="https://vps.infogov.com.ar/rentas/tunuyan/#/public/licencias" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Descargar aranceles de boleto MUNICIPAL
+                                    </a>
+                                </li>
+                                 <li>
+                                    <a href="https://mpfmza.jus.mendoza.gov.ar/denuncias-en-linea-2/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Denuncia de extravío
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="https://sistemas.seguridad.mendoza.gov.ar/webvialcaminera/servlet/com.pagosdeuda.wpdeudaonline" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Consultar multas
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="http://www.dnrec.jus.gov.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                        Turno certificado de reincidencia
                                     </a>
                                 </li>
                             </ul>
