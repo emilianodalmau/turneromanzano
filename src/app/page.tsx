@@ -24,6 +24,9 @@ export default function Home() {
           <Link href="/totem" passHref>
             <Button variant="secondary">Totem de Atención</Button>
           </Link>
+           <Link href="/pantalla" passHref>
+            <Button variant="secondary">Pantalla de Turnos</Button>
+          </Link>
         </div>
       </div>
     </div>

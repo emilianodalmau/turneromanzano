@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
-import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket, ShieldCheck, Briefcase, Computer, MonitorPlay } from 'lucide-react';
+import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket, ShieldCheck, Briefcase, Computer, MonitorPlay, Tv } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,6 +42,7 @@ export default function PanelDeControlLayout({
     if (path.includes('/atencion/areas')) return 'Gestión de Áreas';
     if (path.includes('/atencion/desks')) return 'Gestión de Escritorios';
     if (path.includes('/atencion/agente')) return 'Puesto de Atención';
+    if (path.includes('/atencion/pantalla')) return 'Pantalla de Turnos';
     return 'Panel de Control';
   }
 
@@ -145,6 +146,16 @@ export default function PanelDeControlLayout({
                       <span>
                         <Computer />
                         <span>Gestión de Escritorios</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <Link href="/pantalla" target="_blank">
+                    <SidebarMenuButton asChild tooltip="Ver Pantalla Pública">
+                      <span>
+                        <Tv />
+                        <span>Pantalla Pública</span>
                       </span>
                     </SidebarMenuButton>
                   </Link>
