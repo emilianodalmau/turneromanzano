@@ -28,26 +28,28 @@ function GenerateTicket({ onTicketGenerated }: { onTicketGenerated: (ticket: Que
         const areaPrefix = areas?.find(a => a.id === areaId)?.name.substring(0, 1).toUpperCase() || 'T';
 
         const today = format(new Date(), 'yyyy-MM-dd');
+        const tomorrow = format(new Date(new Date().setDate(new Date().getDate() + 1)), 'yyyy-MM-dd');
 
         const ticketsCollection = collection(firestore, 'queueTickets');
-        // This query now requires a composite index on areaId and createdAt
+        // This query is simplified to avoid needing a composite index.
         const q = query(
             ticketsCollection,
             where('areaId', '==', areaId),
             where('createdAt', '>=', today),
-            where('createdAt', '<', today + '\uf8ff'),
-            orderBy('createdAt', 'desc'),
-            limit(1)
+            where('createdAt', '<', tomorrow)
         );
 
         const querySnapshot = await getDocs(q);
         if (querySnapshot.empty) {
             return `${areaPrefix}-101`;
         } else {
-            const lastTicket = querySnapshot.docs[0].data() as QueueTicket;
-            const lastNumberStr = lastTicket.ticketNumber.split('-')[1];
-            const lastNumber = lastNumberStr ? parseInt(lastNumberStr) : 100;
-            return `${areaPrefix}-${lastNumber + 1}`;
+            // Sort tickets client-side to find the highest number
+            const tickets = querySnapshot.docs.map(doc => doc.data() as QueueTicket);
+            const lastNumber = tickets.reduce((max, ticket) => {
+                const num = parseInt(ticket.ticketNumber.split('-')[1] || '0', 10);
+                return num > max ? num : max;
+            }, 0);
+            return `${areaPrefix}-${(lastNumber || 100) + 1}`;
         }
     };
 
