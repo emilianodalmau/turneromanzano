@@ -20,7 +20,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DeskForm } from '@/components/atencion/DeskForm';
-import { Computer, PlusCircle, Trash2 } from 'lucide-react';
+import { Briefcase, Computer, PlusCircle, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
 
 type DeskWithAreaName = Desk & { areaName?: string };
 
