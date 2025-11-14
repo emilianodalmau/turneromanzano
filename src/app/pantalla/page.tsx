@@ -58,7 +58,7 @@ export default function PantallaTurnos() {
         if (!tickets || !desks) return;
 
         const calledTickets = tickets
-            .filter(t => (t.status === 'called' || t.status === 'attending') && t.calledAt)
+            .filter(t => (t.status === 'called' || t.status === 'attending' || t.status === 'finished') && t.calledAt)
             .sort((a, b) => new Date(b.calledAt!).getTime() - new Date(a.calledAt!).getTime());
 
         const latestTicketData = calledTickets[0];
