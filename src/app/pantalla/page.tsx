@@ -29,7 +29,6 @@ export default function PantallaTurnos() {
     const { data: tickets, isLoading: isLoadingTickets } = useCollection<QueueTicket>(ticketsQuery);
     const { data: desks, isLoading: isLoadingDesks } = useCollection<Desk>(desksQuery);
     
-    // Memoize the desk map to prevent re-renders
     const deskMap = useMemo(() => {
         if (!desks) return new Map();
         return new Map(desks.map(d => [d.id, d.name]));
@@ -38,8 +37,18 @@ export default function PantallaTurnos() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const audio = new Audio('/notification.mp3');
-            audio.muted = true; // Mute by default to prevent autoplay error
+            audio.muted = true;
             audioRef.current = audio;
+
+            // Workaround for browser autoplay policy
+            const enableAudio = () => {
+                if (audioRef.current && audioRef.current.muted) {
+                    audioRef.current.muted = false;
+                }
+                document.body.removeEventListener('click', enableAudio);
+            };
+            document.body.addEventListener('click', enableAudio);
+            return () => document.body.removeEventListener('click', enableAudio);
         }
     }, []);
 
@@ -53,19 +62,19 @@ export default function PantallaTurnos() {
         const latestTicketData = calledTickets[0];
         
         if (latestTicketData) {
-             const newDisplayTicket: DisplayTicket = {
+            const newDisplayTicket: DisplayTicket = {
                 ticketNumber: latestTicketData.ticketNumber,
                 deskName: deskMap.get(latestTicketData.deskId || '') || '---',
             };
 
-            // Play sound if the ticket is new
+            // Play sound only if the main ticket number changes
             if (currentTicket?.ticketNumber !== newDisplayTicket.ticketNumber) {
                  audioRef.current?.play().catch(e => console.warn("Could not play sound:", e.message));
             }
             
+            // Directly set the current and history tickets from the sorted list
             setCurrentTicket(newDisplayTicket);
 
-            // The rest of the called tickets are history
             const historyTickets = calledTickets.slice(1, 6).map(t => ({
                 ticketNumber: t.ticketNumber,
                 deskName: deskMap.get(t.deskId || '') || '---',
@@ -78,7 +87,9 @@ export default function PantallaTurnos() {
             setLastCalled([]);
         }
 
-    }, [tickets, desks, deskMap, currentTicket]);
+    // We depend on `tickets` and `deskMap` as they represent the fresh data.
+    // `currentTicket` is removed from deps to avoid complex state dependency issues.
+    }, [tickets, deskMap]);
 
     if (isLoadingTickets || isLoadingDesks) {
         return <div className="h-screen w-screen flex items-center justify-center bg-gray-900 text-white text-4xl">Cargando...</div>
@@ -116,15 +127,15 @@ export default function PantallaTurnos() {
                     <h3 className="text-3xl font-bold mb-4 text-center">Últimos llamados</h3>
                     <div className="flex-grow space-y-4 overflow-hidden">
                          <AnimatePresence initial={false}>
-                            {lastCalled.map((ticket) => (
+                            {lastCalled.map((ticket, index) => (
                                 <motion.div
-                                    key={ticket.ticketNumber}
+                                    key={`${ticket.ticketNumber}-${index}`}
                                     layout
                                     initial={{ opacity: 0, y: -20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, x: -50 }}
+                                    exit={{ opacity: 0, x: -50, position: 'absolute' }}
                                     transition={{ duration: 0.5, type: 'spring' }}
-                                    className="flex justify-between items-center bg-gray-700 p-4 rounded-lg text-2xl"
+                                    className="flex justify-between items-center bg-gray-700 p-4 rounded-lg text-2xl w-full"
                                 >
                                     <span className="font-bold">{ticket.ticketNumber}</span>
                                     <span className="text-gray-300">Esc. {ticket.deskName}</span>
