@@ -38,6 +38,7 @@ export default function PantallaTurnos() {
         if (typeof window !== 'undefined') {
             const audio = new Audio('/notification.mp3');
             audioRef.current = audio;
+            audioRef.current.muted = true; // Start muted
             // This is a workaround for browsers' autoplay policy.
             const enableAudio = () => {
                 // The user has interacted with the page, we can now safely unmute.
