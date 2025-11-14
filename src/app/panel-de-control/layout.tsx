@@ -30,7 +30,6 @@ export default function PanelDeControlLayout({
   }
   
   const userRole = profile?.role;
-  const isAdmin = userRole === 'manzano_admin' || userRole === 'license_admin' || userRole === 'super_admin';
 
   const getTitleForPath = (path: string) => {
     if (path.includes('/mi-perfil')) return 'Mi Perfil';
@@ -115,7 +114,8 @@ export default function PanelDeControlLayout({
               </>
             )}
             
-            {isAdmin && (
+            {userRole === 'super_admin' && (
+              <>
                <SidebarMenuItem>
                   <Link href="/panel-de-control/atencion/agente">
                     <SidebarMenuButton asChild tooltip="Puesto de Atención" isActive={pathname.startsWith('/panel-de-control/atencion/agente')}>
@@ -126,10 +126,6 @@ export default function PanelDeControlLayout({
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
-            )}
-
-            {userRole === 'super_admin' && (
-              <>
                 <SidebarMenuItem>
                   <Link href="/panel-de-control/atencion/areas">
                     <SidebarMenuButton asChild tooltip="Áreas de Atención" isActive={pathname.startsWith('/panel-de-control/atencion/areas')}>
