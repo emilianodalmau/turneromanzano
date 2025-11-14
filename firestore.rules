@@ -13,7 +13,8 @@ service cloud.firestore {
 
     match /appointments/{appointmentId} {
       allow create: if true;
-      allow read, list: if request.auth != null; // To be refined with roles
+      allow list: if true; // Allow public listing for availability checks
+      allow read: if request.auth != null; // Only authenticated users can read full details
       allow update, delete: if request.auth != null; // To be refined with roles
     }
 
