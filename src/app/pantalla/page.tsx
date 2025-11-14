@@ -37,13 +37,14 @@ export default function PantallaTurnos() {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const audio = new Audio('/notification.mp3');
-            audio.muted = true;
             audioRef.current = audio;
-
-            // Workaround for browser autoplay policy
+            // This is a workaround for browsers' autoplay policy.
             const enableAudio = () => {
+                // The user has interacted with the page, we can now safely unmute.
                 if (audioRef.current && audioRef.current.muted) {
                     audioRef.current.muted = false;
+                    // Optional: play a short silent sound to "prime" the audio context
+                    audioRef.current.play().then(() => audioRef.current?.pause()).catch(() => {});
                 }
                 document.body.removeEventListener('click', enableAudio);
             };
@@ -67,7 +68,8 @@ export default function PantallaTurnos() {
                 deskName: deskMap.get(latestTicketData.deskId || '') || '---',
             };
 
-            // Play sound only if the main ticket number changes
+            // Play sound only if the main ticket number changes.
+            // This check is safe because `currentTicket` is from the *previous* render.
             if (currentTicket?.ticketNumber !== newDisplayTicket.ticketNumber) {
                  audioRef.current?.play().catch(e => console.warn("Could not play sound:", e.message));
             }
@@ -86,9 +88,8 @@ export default function PantallaTurnos() {
             setCurrentTicket(null);
             setLastCalled([]);
         }
-
-    // We depend on `tickets` and `deskMap` as they represent the fresh data.
-    // `currentTicket` is removed from deps to avoid complex state dependency issues.
+    // The effect should ONLY depend on the raw data from Firestore.
+    // `currentTicket` is removed from the dependency array to prevent incorrect re-runs.
     }, [tickets, deskMap]);
 
     if (isLoadingTickets || isLoadingDesks) {
