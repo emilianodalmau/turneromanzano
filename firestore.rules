@@ -46,11 +46,9 @@ service cloud.firestore {
     }
 
     match /queueTickets/{ticketId} {
-      allow read, list: if true; // Public read for screens, agent list
+      allow list, read: if true; // Public read for screens, agent list
       allow create: if true; // Public create for totem
       allow update: if request.auth != null; // Only agents can update
     }
   }
 }
-
-    
