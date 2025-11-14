@@ -30,9 +30,9 @@ function GenerateTicket({ onTicketGenerated }: { onTicketGenerated: (ticket: Que
         const today = format(new Date(), 'yyyy-MM-dd');
 
         const ticketsCollection = collection(firestore, 'queueTickets');
+        // Simplified query to avoid composite index requirement
         const q = query(
             ticketsCollection,
-            where('areaId', '==', areaId),
             where('createdAt', '>=', today),
             where('createdAt', '<', today + '\uf8ff'),
             orderBy('createdAt', 'desc'),
@@ -44,7 +44,8 @@ function GenerateTicket({ onTicketGenerated }: { onTicketGenerated: (ticket: Que
             return `${areaPrefix}-101`;
         } else {
             const lastTicket = querySnapshot.docs[0].data() as QueueTicket;
-            const lastNumber = parseInt(lastTicket.ticketNumber.split('-')[1]);
+            const lastNumberStr = lastTicket.ticketNumber.split('-')[1];
+            const lastNumber = lastNumberStr ? parseInt(lastNumberStr) : 100;
             return `${areaPrefix}-${lastNumber + 1}`;
         }
     };
