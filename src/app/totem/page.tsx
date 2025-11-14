@@ -30,9 +30,10 @@ function GenerateTicket({ onTicketGenerated }: { onTicketGenerated: (ticket: Que
         const today = format(new Date(), 'yyyy-MM-dd');
 
         const ticketsCollection = collection(firestore, 'queueTickets');
-        // Simplified query to avoid composite index requirement
+        // This query now requires a composite index on areaId and createdAt
         const q = query(
             ticketsCollection,
+            where('areaId', '==', areaId),
             where('createdAt', '>=', today),
             where('createdAt', '<', today + '\uf8ff'),
             orderBy('createdAt', 'desc'),
