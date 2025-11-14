@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { UserCredential } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const firestore = getFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -27,7 +29,11 @@ export default function LoginPage() {
 
   const handleSignIn = () => {
     if (!email || !password) {
-      alert('Por favor, ingresa tu correo y contraseña.');
+      toast({
+        variant: "destructive",
+        title: "Campos incompletos",
+        description: "Por favor, ingresa tu correo y contraseña.",
+      });
       return;
     }
     initiateEmailSignIn(auth, email, password);
@@ -35,7 +41,11 @@ export default function LoginPage() {
   
   const handleSignUp = async () => {
     if (!email || !password) {
-      alert('Por favor, ingresa un correo y contraseña para registrarte.');
+      toast({
+        variant: "destructive",
+        title: "Campos incompletos",
+        description: "Por favor, ingresa un correo y contraseña para registrarte.",
+      });
       return;
     }
 
@@ -61,7 +71,19 @@ export default function LoginPage() {
       }
     } catch (error: any) {
         console.error("Sign up error:", error);
-        alert(`Error al registrarse: ${error.message}`);
+        if (error.code === 'auth/email-already-in-use') {
+             toast({
+                variant: "destructive",
+                title: 'Error de Registro',
+                description: 'El correo electrónico ya está en uso. Por favor, intenta iniciar sesión o utiliza otro correo.',
+            });
+        } else {
+             toast({
+                variant: "destructive",
+                title: 'Error de Registro',
+                description: error.message,
+            });
+        }
     }
   };
 
