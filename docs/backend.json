@@ -83,6 +83,11 @@
             "type": "string",
             "description": "Name of the school or institution visiting."
         },
+        "schoolEmail": {
+          "type": "string",
+          "description": "Email of the school or institution visiting.",
+          "format": "email"
+        },
         "visitorCount": {
             "type": "number",
             "description": "Number of people in the visiting group."

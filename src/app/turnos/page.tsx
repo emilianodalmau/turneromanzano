@@ -37,6 +37,7 @@ const formSchema = z.object({
   phone: z.string().min(1, 'El teléfono es requerido.'),
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
+  schoolEmail: z.string().email('El email de la institución no es válido.').optional().or(z.literal('')),
   visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
@@ -73,6 +74,7 @@ export default function TurnosPage() {
       phone: '',
       dni: '',
       schoolName: '',
+      schoolEmail: '',
       visitorCount: 1,
       timeSlot: '',
     },
@@ -141,6 +143,7 @@ export default function TurnosPage() {
             endTime: selectedSlot.endTime,
             responsibleName: `${data.name} ${data.lastName}`,
             schoolName: data.schoolName,
+            schoolEmail: data.schoolEmail,
             visitorCount: data.visitorCount,
             status: 'pending' as 'pending',
             paid: false,
@@ -201,6 +204,19 @@ export default function TurnosPage() {
                                 <FormLabel>Nombre de la escuela o institución</FormLabel>
                                 <FormControl>
                                     <Input placeholder="Ej: Escuela N°1" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="schoolEmail"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Email de la institución (Opcional)</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="contacto@escuela.com" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>

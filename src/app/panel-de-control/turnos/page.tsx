@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -45,6 +46,7 @@ import { Label } from '@/components/ui/label';
 const editFormSchema = z.object({
   responsibleName: z.string().min(1, 'El nombre es requerido.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
+  schoolEmail: z.string().email('El email de la institución no es válido.').optional().or(z.literal('')),
   visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
   date: z.date({ required_error: 'Se requiere una fecha para la visita.' }),
   timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
@@ -84,6 +86,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
     const defaultValues = useMemo(() => ({
         responsibleName: appointment.responsibleName,
         schoolName: appointment.schoolName,
+        schoolEmail: appointment.schoolEmail || '',
         visitorCount: appointment.visitorCount,
         date: new Date(appointment.date + 'T00:00:00'),
         timeSlot: appointment.startTime,
@@ -165,6 +168,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
             ...appointment,
             responsibleName: data.responsibleName,
             schoolName: data.schoolName,
+            schoolEmail: data.schoolEmail,
             visitorCount: data.visitorCount,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
@@ -196,6 +200,13 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                                 <FormItem>
                                     <FormLabel>Institución</FormLabel>
                                     <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="schoolEmail" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email Institución</FormLabel>
+                                    <FormControl><Input type="email" placeholder="contacto@escuela.com" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}/>
@@ -357,6 +368,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                 const searchTerm = filters.searchText.toLowerCase();
                 const responsibleName = appointment.responsibleName.toLowerCase();
                 const schoolName = appointment.schoolName.toLowerCase();
+                const schoolEmail = appointment.schoolEmail?.toLowerCase() || '';
                 const userDni = appointment.user?.dni.toLowerCase() || '';
                 const userEmail = appointment.user?.email.toLowerCase() || '';
                 const userPhone = appointment.user?.phone.toLowerCase() || '';
@@ -364,6 +376,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                 if (
                     !responsibleName.includes(searchTerm) &&
                     !schoolName.includes(searchTerm) &&
+                    !schoolEmail.includes(searchTerm) &&
                     !userDni.includes(searchTerm) &&
                     !userEmail.includes(searchTerm) &&
                     !userPhone.includes(searchTerm)
@@ -520,6 +533,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <p className="text-sm text-muted-foreground">Responsable: {appointment.responsibleName}</p>
+                                    {appointment.schoolEmail && <p className="text-sm text-muted-foreground">Email Inst: {appointment.schoolEmail}</p>}
                                     <p className="text-sm text-muted-foreground">Visitantes: {appointment.visitorCount}</p>
                                     <div className="flex items-center">
                                         <p className="text-sm text-muted-foreground mr-2">Estado:</p>
@@ -588,6 +602,3 @@ export default function GestionTurnosPage() {
 
     return <AppointmentList appointments={appointments || []} users={users || []} />;
 }
-
-    
-    

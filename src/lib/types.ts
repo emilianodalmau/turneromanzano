@@ -156,6 +156,7 @@ export interface MutableAppointment {
   endTime: string;
   responsibleName: string;
   schoolName: string;
+  schoolEmail?: string;
   visitorCount: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   paid?: boolean;
@@ -222,5 +223,3 @@ export interface QueueTicket {
   deskId?: string;
   originalAppointmentId?: string;
 }
-
-    
