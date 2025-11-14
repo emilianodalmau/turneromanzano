@@ -428,6 +428,15 @@ export default function TurnosLicenciasPage() {
                             Todo ciudadano que realice modificaciones de Datos en su DOCUMENTO NACIONAL DE IDENTIDAD debe actualizar los mismos en su licencia de conducir, en un plazo no superior a 90 DÍAS de realizada la edición del mismo. La licencia CADUCA A LOS 90 DÍAS de producido el cambio no denunciado.
                         </AlertDescription>
                     </Alert>
+                    <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle className="font-bold">ARTÍCULO 14 LEY NACIONAL 24449</AlertTitle>
+                        <AlertDescription>
+                            <p>REQUISITOS: SABER LEER Y PARA LOS CONDUCTORES PROFESIONALES TAMBIÉN ESCRIBIR.</p>
+                            <p className="mt-2 font-semibold">La seguridad vial es responsabilidad de todos los tunuyaninos</p>
+                            <p className="text-sm">Municipalidad de Tunuyán.</p>
+                        </AlertDescription>
+                    </Alert>
                 </div>
             )}
           <Form {...form}>
