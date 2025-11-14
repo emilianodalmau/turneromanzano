@@ -201,6 +201,47 @@
             "capacity": { "type": "number" }
         },
         "required": ["startTime", "endTime", "capacity"]
+    },
+    "Area": {
+      "title": "Area",
+      "type": "object",
+      "description": "Defines an attention area within the municipality (e.g., 'Licencias', 'Rentas').",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "name"]
+    },
+    "Desk": {
+      "title": "Desk",
+      "type": "object",
+      "description": "Represents a physical attention desk or post.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "description": "e.g., 'Escritorio 01', 'Ventanilla 03'" },
+        "areaId": { "type": "string", "description": "The ID of the area this desk belongs to." },
+        "assignedAgentId": { "type": "string", "description": "The ID of the user currently assigned to this desk." },
+        "status": { "type": "string", "enum": ["active", "inactive", "paused"] }
+      },
+      "required": ["id", "name", "areaId", "status"]
+    },
+    "QueueTicket": {
+      "title": "QueueTicket",
+      "type": "object",
+      "description": "Represents a ticket in the virtual queue for presential attention.",
+      "properties": {
+        "id": { "type": "string" },
+        "ticketNumber": { "type": "string", "description": "e.g., 'A-101'" },
+        "areaId": { "type": "string" },
+        "type": { "type": "string", "enum": ["with_appointment", "walk_in"] },
+        "status": { "type": "string", "enum": ["waiting", "called", "attending", "finished", "absent"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "calledAt": { "type": "string", "format": "date-time" },
+        "deskId": { "type": "string", "description": "The desk that called this ticket." },
+        "originalAppointmentId": { "type": "string", "description": "The ID of the original online appointment if it was a check-in." }
+      },
+      "required": ["id", "ticketNumber", "areaId", "type", "status", "createdAt"]
     }
   },
   "auth": {
@@ -275,8 +316,37 @@
           "description": "Stores configurations for available driver's license appointment times. Access should be restricted to 'license_admin' role.",
           "params": [{"name": "licenseScheduleConfigurationId", "description": "The unique identifier for the license schedule configuration."}]
         }
+      },
+      {
+        "path": "/areas/{areaId}",
+        "definition": {
+          "entityName": "Area",
+          "schema": { "$ref": "#/backend/entities/Area" },
+          "description": "Stores the different attention areas of the municipality.",
+          "params": [{"name": "areaId", "description": "The unique identifier for the area."}]
+        }
+      },
+      {
+        "path": "/desks/{deskId}",
+        "definition": {
+          "entityName": "Desk",
+          "schema": { "$ref": "#/backend/entities/Desk" },
+          "description": "Stores the physical attention desks.",
+          "params": [{"name": "deskId", "description": "The unique identifier for the desk."}]
+        }
+      },
+      {
+        "path": "/queueTickets/{queueTicketId}",
+        "definition": {
+          "entityName": "QueueTicket",
+          "schema": { "$ref": "#/backend/entities/QueueTicket" },
+          "description": "Stores the real-time tickets for the attention queue.",
+          "params": [{"name": "queueTicketId", "description": "The unique identifier for the queue ticket."}]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is central. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles."
+    "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is central. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles. New collections for Areas, Desks, and QueueTickets are added to support the presential attention system."
   }
 }
+
+    

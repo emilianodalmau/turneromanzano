@@ -1,3 +1,4 @@
+
 'use client';
 
 export type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -191,6 +192,34 @@ export interface LicenseScheduleConfiguration {
     days: {
         [key in DayKey]: DayConfiguration;
     };
+}
+
+// --- TIPOS PARA EL SISTEMA DE ATENCIÓN PRESENCIAL ---
+
+export interface Area {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface Desk {
+  id: string;
+  name: string;
+  areaId: string;
+  assignedAgentId?: string;
+  status: 'active' | 'inactive' | 'paused';
+}
+
+export interface QueueTicket {
+  id: string;
+  ticketNumber: string; // e.g., 'A-101'
+  areaId: string;
+  type: 'with_appointment' | 'walk_in';
+  status: 'waiting' | 'called' | 'attending' | 'finished' | 'absent';
+  createdAt: string; // ISO String
+  calledAt?: string; // ISO String
+  deskId?: string;
+  originalAppointmentId?: string;
 }
 
     
