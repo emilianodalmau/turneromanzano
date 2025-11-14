@@ -38,30 +38,18 @@ export default function PantallaTurnos() {
         if (typeof window !== 'undefined') {
             const audio = new Audio('/notification.mp3');
             audioRef.current = audio;
-            audioRef.current.muted = true; // Start muted
-            // This is a workaround for browsers' autoplay policy.
-            const enableAudio = () => {
-                // The user has interacted with the page, we can now safely unmute.
-                if (audioRef.current && audioRef.current.muted) {
-                    audioRef.current.muted = false;
-                    // Optional: play a short silent sound to "prime" the audio context
-                    audioRef.current.play().then(() => audioRef.current?.pause()).catch(() => {});
-                }
-                document.body.removeEventListener('click', enableAudio);
-            };
-            document.body.addEventListener('click', enableAudio);
-            return () => document.body.removeEventListener('click', enableAudio);
         }
     }, []);
 
     useEffect(() => {
         if (!tickets || !desks) return;
 
-        const calledTickets = tickets
-            .filter(t => (t.status === 'called' || t.status === 'attending' || t.status === 'finished') && t.calledAt)
+        // 1. Filter for all tickets that are no longer 'waiting' and have a call time.
+        const processedTickets = tickets
+            .filter(t => t.status !== 'waiting' && t.calledAt)
             .sort((a, b) => new Date(b.calledAt!).getTime() - new Date(a.calledAt!).getTime());
 
-        const latestTicketData = calledTickets[0];
+        const latestTicketData = processedTickets[0];
         
         if (latestTicketData) {
             const newDisplayTicket: DisplayTicket = {
@@ -70,15 +58,14 @@ export default function PantallaTurnos() {
             };
 
             // Play sound only if the main ticket number changes.
-            // This check is safe because `currentTicket` is from the *previous* render.
             if (currentTicket?.ticketNumber !== newDisplayTicket.ticketNumber) {
                  audioRef.current?.play().catch(e => console.warn("Could not play sound:", e.message));
             }
             
-            // Directly set the current and history tickets from the sorted list
+            // 2. Directly set the current and history tickets from the sorted list
             setCurrentTicket(newDisplayTicket);
 
-            const historyTickets = calledTickets.slice(1, 6).map(t => ({
+            const historyTickets = processedTickets.slice(1, 6).map(t => ({
                 ticketNumber: t.ticketNumber,
                 deskName: deskMap.get(t.deskId || '') || '---',
             }));
@@ -90,7 +77,6 @@ export default function PantallaTurnos() {
             setLastCalled([]);
         }
     // The effect should ONLY depend on the raw data from Firestore.
-    // `currentTicket` is removed from the dependency array to prevent incorrect re-runs.
     }, [tickets, deskMap]);
 
     if (isLoadingTickets || isLoadingDesks) {
