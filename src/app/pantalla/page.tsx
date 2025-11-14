@@ -37,7 +37,9 @@ export default function PantallaTurnos() {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            audioRef.current = new Audio('/notification.mp3');
+            const audio = new Audio('/notification.mp3');
+            audio.muted = true; // Mute by default to prevent autoplay error
+            audioRef.current = audio;
         }
     }, []);
 
@@ -59,7 +61,8 @@ export default function PantallaTurnos() {
             // Check if the latest ticket is different from the current one
             if (currentTicket?.ticketNumber !== newDisplayTicket.ticketNumber) {
                 setCurrentTicket(newDisplayTicket);
-                audioRef.current?.play().catch(e => console.error("Error playing sound:", e));
+                // The play attempt will be silent if unmuted isn't triggered by user gesture
+                audioRef.current?.play().catch(e => console.warn("Could not play sound:", e.message));
             }
         }
         
