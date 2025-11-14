@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Ticket, Printer } from 'lucide-react';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, isToday } from 'date-fns';
 
 function GenerateTicket({ onTicketGenerated }: { onTicketGenerated: (ticket: QueueTicket) => void }) {
     const firestore = useFirestore();
@@ -23,29 +23,27 @@ function GenerateTicket({ onTicketGenerated }: { onTicketGenerated: (ticket: Que
     const { data: areas, isLoading: isLoadingAreas } = useCollection<Area>(areasQuery);
 
     const generateTicketNumber = async (areaId: string): Promise<string> => {
-        if (!firestore) return 'A-000';
-        
+        if (!firestore) return 'E-000';
+
         const areaPrefix = areas?.find(a => a.id === areaId)?.name.substring(0, 1).toUpperCase() || 'T';
 
-        const today = format(new Date(), 'yyyy-MM-dd');
-        const tomorrow = format(new Date(new Date().setDate(new Date().getDate() + 1)), 'yyyy-MM-dd');
-
         const ticketsCollection = collection(firestore, 'queueTickets');
-        // This query is simplified to avoid needing a composite index.
-        const q = query(
-            ticketsCollection,
-            where('areaId', '==', areaId),
-            where('createdAt', '>=', today),
-            where('createdAt', '<', tomorrow)
-        );
+        // Query for all tickets in the area to filter client-side.
+        // This avoids composite index requirements.
+        const q = query(ticketsCollection, where('areaId', '==', areaId));
 
         const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
+        
+        // Filter for today's tickets on the client
+        const todaysTickets = querySnapshot.docs
+            .map(doc => doc.data() as QueueTicket)
+            .filter(ticket => isToday(new Date(ticket.createdAt)));
+
+        if (todaysTickets.length === 0) {
             return `${areaPrefix}-101`;
         } else {
-            // Sort tickets client-side to find the highest number
-            const tickets = querySnapshot.docs.map(doc => doc.data() as QueueTicket);
-            const lastNumber = tickets.reduce((max, ticket) => {
+            // Find the highest number among today's tickets
+            const lastNumber = todaysTickets.reduce((max, ticket) => {
                 const num = parseInt(ticket.ticketNumber.split('-')[1] || '0', 10);
                 return num > max ? num : max;
             }, 0);
