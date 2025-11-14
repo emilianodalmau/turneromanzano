@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
-import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket, ShieldCheck, Briefcase, Computer } from 'lucide-react';
+import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket, ShieldCheck, Briefcase, Computer, MonitorPlay } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,6 +30,7 @@ export default function PanelDeControlLayout({
   }
   
   const userRole = profile?.role;
+  const isAdmin = userRole === 'manzano_admin' || userRole === 'license_admin' || userRole === 'super_admin';
 
   const getTitleForPath = (path: string) => {
     if (path.includes('/mi-perfil')) return 'Mi Perfil';
@@ -40,6 +41,7 @@ export default function PanelDeControlLayout({
     if (path.includes('/turnos')) return 'Gestion de Turnos';
     if (path.includes('/atencion/areas')) return 'Gestión de Áreas';
     if (path.includes('/atencion/desks')) return 'Gestión de Escritorios';
+    if (path.includes('/atencion/agente')) return 'Puesto de Atención';
     return 'Panel de Control';
   }
 
@@ -110,6 +112,19 @@ export default function PanelDeControlLayout({
                   </Link>
                 </SidebarMenuItem>
               </>
+            )}
+            
+            {isAdmin && (
+               <SidebarMenuItem>
+                  <Link href="/panel-de-control/atencion/agente">
+                    <SidebarMenuButton asChild tooltip="Puesto de Atención" isActive={pathname.startsWith('/panel-de-control/atencion/agente')}>
+                      <span>
+                        <MonitorPlay />
+                        <span>Puesto de Atención</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
             )}
 
             {userRole === 'super_admin' && (
