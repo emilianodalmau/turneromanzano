@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -91,6 +92,13 @@ export default function TurnosPage() {
     if (!dayConfig || !dayConfig.enabled) {
       setAvailableSlots([]);
       return;
+    }
+    
+    // Check if the date is in the blockedDates array
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    if (scheduleConfig.blockedDates?.includes(dateString)) {
+        setAvailableSlots([]);
+        return;
     }
 
     const appointmentsOnSelectedDate = (allAppointments || []).filter(
@@ -242,10 +250,16 @@ export default function TurnosPage() {
                                         selected={field.value}
                                         onSelect={field.onChange}
                                         disabled={(date) => {
-                                            if (isScheduleLoading) return false;
+                                            if (isScheduleLoading) return true;
                                             const today = new Date();
                                             today.setHours(0, 0, 0, 0);
                                             if (date < today) return true;
+
+                                            // Check if the date is in the blocked dates list
+                                            const dateString = format(date, 'yyyy-MM-dd');
+                                            if (scheduleConfig?.blockedDates?.includes(dateString)) {
+                                                return true;
+                                            }
 
                                             const dayKey = dayNamesInEnglish[date.getDay()];
                                             if (!scheduleConfig?.days[dayKey]?.enabled) {

@@ -139,6 +139,7 @@ export interface ScheduleConfiguration {
   days: {
     [key in DayKey]: DayConfiguration;
   };
+  blockedDates?: string[]; // Array of 'YYYY-MM-DD'
 }
 
 // Omit 'id' from the base Appointment to prevent it from being overwritten during updates.
