@@ -15,10 +15,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { Area, Desk } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -29,12 +30,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface DeskFormProps {
   areas: Area[];
+  desk?: Desk | null;
   onFormSubmit?: () => void;
 }
 
-export function DeskForm({ areas, onFormSubmit }: DeskFormProps) {
+export function DeskForm({ areas, desk, onFormSubmit }: DeskFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const isEditing = !!desk;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -44,34 +47,58 @@ export function DeskForm({ areas, onFormSubmit }: DeskFormProps) {
     },
   });
 
+  useEffect(() => {
+    if (isEditing && desk) {
+      form.reset({
+        name: desk.name,
+        areaId: desk.areaId,
+      });
+    } else {
+      form.reset({ name: '', areaId: '' });
+    }
+  }, [desk, isEditing, form]);
+
   const { isSubmitting } = form.formState;
 
   async function onSubmit(data: FormValues) {
     if (!firestore) return;
 
     try {
-      const desksCollection = collection(firestore, 'desks');
-      const newDesk: Omit<Desk, 'id'> = {
-        name: data.name,
-        areaId: data.areaId,
-        status: 'inactive', // Default status
-      };
-      
-      await addDocumentNonBlocking(desksCollection, newDesk);
-      
-      toast({
-        title: 'Escritorio Creado',
-        description: `El escritorio "${data.name}" ha sido creado exitosamente.`,
-      });
+      if (isEditing && desk) {
+        // Update existing desk
+        const deskRef = doc(firestore, 'desks', desk.id);
+        const updatedDeskData = {
+          name: data.name,
+          areaId: data.areaId,
+        };
+        setDocumentNonBlocking(deskRef, updatedDeskData, { merge: true });
+        toast({
+          title: 'Escritorio Actualizado',
+          description: `El escritorio "${data.name}" ha sido actualizado.`,
+        });
+      } else {
+        // Create new desk
+        const desksCollection = collection(firestore, 'desks');
+        const newDesk: Omit<Desk, 'id'> = {
+          name: data.name,
+          areaId: data.areaId,
+          status: 'inactive', // Default status
+        };
+        await addDocumentNonBlocking(desksCollection, newDesk);
+        toast({
+          title: 'Escritorio Creado',
+          description: `El escritorio "${data.name}" ha sido creado exitosamente.`,
+        });
+      }
 
       form.reset();
       onFormSubmit?.();
     } catch (error) {
-      console.error('Error creando el escritorio:', error);
+      console.error('Error guardando el escritorio:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo crear el escritorio. Por favor, inténtalo de nuevo.',
+        description: 'No se pudo guardar el escritorio. Por favor, inténtalo de nuevo.',
       });
     }
   }
@@ -98,7 +125,7 @@ export function DeskForm({ areas, onFormSubmit }: DeskFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Área de Atención</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona un área" />
@@ -120,10 +147,10 @@ export function DeskForm({ areas, onFormSubmit }: DeskFormProps) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creando...
+              {isEditing ? 'Guardando...' : 'Creando...'}
             </>
           ) : (
-            'Crear Escritorio'
+            isEditing ? 'Guardar Cambios' : 'Crear Escritorio'
           )}
         </Button>
       </form>

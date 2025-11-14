@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { DeskForm } from '@/components/atencion/DeskForm';
-import { Briefcase, Computer, PlusCircle, Trash2 } from 'lucide-react';
+import { Briefcase, Computer, PlusCircle, Trash2, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 
@@ -29,6 +29,7 @@ type DeskWithAreaName = Desk & { areaName?: string };
 function DeskList({ desks, areas }: { desks: DeskWithAreaName[], areas: Area[] }) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const [editingDesk, setEditingDesk] = useState<Desk | null>(null);
 
     const desksWithAreaNames = useMemo(() => {
         const areaMap = new Map(areas.map(area => [area.id, area.name]));
@@ -62,45 +63,66 @@ function DeskList({ desks, areas }: { desks: DeskWithAreaName[], areas: Area[] }
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {desksWithAreaNames.map((desk) => (
-                <Card key={desk.id}>
-                    <CardHeader>
-                        <CardTitle>{desk.name}</CardTitle>
-                        <CardDescription>Área: {desk.areaName}</CardDescription>
-                    </CardHeader>
-                     <CardContent>
-                        <Badge variant={desk.status === 'active' ? 'default' : 'secondary'}>
-                            {desk.status}
-                        </Badge>
-                     </CardContent>
-                    <CardFooter className="flex justify-end">
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Esta acción no se puede deshacer. Se eliminará el escritorio permanentemente.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(desk.id, desk.name)}>
+        <>
+            <Sheet open={!!editingDesk} onOpenChange={(isOpen) => !isOpen && setEditingDesk(null)}>
+                <SheetContent>
+                    <SheetHeader>
+                        <SheetTitle>Editar Escritorio</SheetTitle>
+                    </SheetHeader>
+                    <div className="p-4">
+                        <DeskForm 
+                            areas={areas} 
+                            desk={editingDesk}
+                            onFormSubmit={() => setEditingDesk(null)} 
+                        />
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {desksWithAreaNames.map((desk) => (
+                    <Card key={desk.id}>
+                        <CardHeader>
+                            <CardTitle>{desk.name}</CardTitle>
+                            <CardDescription>Área: {desk.areaName}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Badge variant={desk.status === 'active' ? 'default' : 'secondary'}>
+                                {desk.status}
+                            </Badge>
+                        </CardContent>
+                        <CardFooter className="flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setEditingDesk(desk)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm">
+                                        <Trash2 className="mr-2 h-4 w-4" />
                                         Eliminar
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </CardFooter>
-                </Card>
-            ))}
-        </div>
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Esta acción no se puede deshacer. Se eliminará el escritorio permanentemente.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(desk.id, desk.name)}>
+                                            Eliminar
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </CardFooter>
+                    </Card>
+                ))}
+            </div>
+        </>
     );
 }
 
