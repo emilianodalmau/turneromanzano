@@ -50,28 +50,33 @@ export default function PantallaTurnos() {
             .filter(t => (t.status === 'called' || t.status === 'attending') && t.calledAt)
             .sort((a, b) => new Date(b.calledAt!).getTime() - new Date(a.calledAt!).getTime());
 
-        if (calledTickets.length > 0) {
-            const latestTicketData = calledTickets[0];
-            const deskName = deskMap.get(latestTicketData.deskId || '') || '---';
-            const newDisplayTicket: DisplayTicket = {
+        const latestTicketData = calledTickets[0];
+        
+        if (latestTicketData) {
+             const newDisplayTicket: DisplayTicket = {
                 ticketNumber: latestTicketData.ticketNumber,
-                deskName: deskName,
+                deskName: deskMap.get(latestTicketData.deskId || '') || '---',
             };
 
-            // Check if the latest ticket is different from the current one
+            // Play sound if the ticket is new
             if (currentTicket?.ticketNumber !== newDisplayTicket.ticketNumber) {
-                setCurrentTicket(newDisplayTicket);
-                // The play attempt will be silent if unmuted isn't triggered by user gesture
-                audioRef.current?.play().catch(e => console.warn("Could not play sound:", e.message));
+                 audioRef.current?.play().catch(e => console.warn("Could not play sound:", e.message));
             }
-        }
-        
-        const historyTickets = calledTickets.slice(1, 6).map(t => ({
-            ticketNumber: t.ticketNumber,
-            deskName: deskMap.get(t.deskId || '') || '---',
-        }));
+            
+            setCurrentTicket(newDisplayTicket);
 
-        setLastCalled(historyTickets);
+            // The rest of the called tickets are history
+            const historyTickets = calledTickets.slice(1, 6).map(t => ({
+                ticketNumber: t.ticketNumber,
+                deskName: deskMap.get(t.deskId || '') || '---',
+            }));
+            setLastCalled(historyTickets);
+
+        } else {
+            // No called tickets, clear everything
+            setCurrentTicket(null);
+            setLastCalled([]);
+        }
 
     }, [tickets, desks, deskMap, currentTicket]);
 
@@ -111,7 +116,7 @@ export default function PantallaTurnos() {
                     <h3 className="text-3xl font-bold mb-4 text-center">Últimos llamados</h3>
                     <div className="flex-grow space-y-4 overflow-hidden">
                          <AnimatePresence initial={false}>
-                            {lastCalled.map((ticket, index) => (
+                            {lastCalled.map((ticket) => (
                                 <motion.div
                                     key={ticket.ticketNumber}
                                     layout
