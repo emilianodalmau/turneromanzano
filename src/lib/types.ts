@@ -194,6 +194,7 @@ export interface LicenseScheduleConfiguration {
     days: {
         [key in DayKey]: DayConfiguration;
     };
+    blockedDates?: string[]; // Array of 'YYYY-MM-DD'
 }
 
 // --- TIPOS PARA EL SISTEMA DE ATENCIÓN PRESENCIAL ---

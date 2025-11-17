@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,11 +23,13 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Trash2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useEffect } from 'react';
-import { useFirestore, useDoc, useMemoFirebase, setDocumentNonBlocking, useUser } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useMemo, useState } from 'react';
+import { useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useUser } from '@/firebase';
+import { doc, DocumentReference } from 'firebase/firestore';
 import { LicenseScheduleConfiguration, dayNames, DayKey } from '@/lib/types';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 
 const slotSchema = z.object({
   startTime: z.string().regex(/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/, 'Formato HH:MM'),
@@ -176,6 +179,58 @@ function DayScheduleAccordion({ dayKey, dayName, form }: DayScheduleAccordionPro
   );
 }
 
+function BlockedDatesManager({ scheduleRef, initialBlockedDates }: { scheduleRef: DocumentReference | null, initialBlockedDates?: string[] }) {
+    const { toast } = useToast();
+    // Convert string dates from props to Date objects for the calendar
+    const initialDates = useMemoFirebase(() => initialBlockedDates?.map(dateStr => new Date(dateStr + 'T00:00:00')) || [], [initialBlockedDates]);
+    const [blockedDates, setBlockedDates] = useState<Date[] | undefined>(initialDates);
+
+    useEffect(() => {
+        setBlockedDates(initialDates);
+    }, [initialDates]);
+
+    const handleSaveBlockedDates = () => {
+        if (!scheduleRef) {
+            toast({
+                variant: "destructive",
+                title: 'Error',
+                description: 'No se pudo conectar a la base de datos.',
+            });
+            return;
+        }
+
+        // Convert Date objects back to 'YYYY-MM-DD' strings before saving
+        const datesToSave = blockedDates?.map(date => format(date, 'yyyy-MM-dd')) || [];
+        updateDocumentNonBlocking(scheduleRef, { blockedDates: datesToSave });
+
+        toast({
+            title: 'Fechas bloqueadas actualizadas',
+            description: 'El calendario ha sido actualizado con los nuevos días no laborables.',
+        });
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Bloquear Fechas Específicas</CardTitle>
+                <CardDescription>
+                    Selecciona los días festivos o fechas particulares en las que no se atenderá. 
+                    Estos días no permitirán sacar turnos, independientemente de la configuración semanal.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+                <Calendar
+                    mode="multiple"
+                    selected={blockedDates}
+                    onSelect={setBlockedDates}
+                    className="rounded-md border"
+                    disabled={{ before: new Date(new Date().setDate(new Date().getDate() - 1)) }}
+                />
+                <Button onClick={handleSaveBlockedDates} className="w-full md:w-auto">Guardar Fechas Bloqueadas</Button>
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function LicenseScheduleConfigPage() {
   const { toast } = useToast();
@@ -196,7 +251,10 @@ export default function LicenseScheduleConfigPage() {
 
   useEffect(() => {
     if (!isDocLoading && scheduleConfig) {
-      form.reset({ days: scheduleConfig.days });
+      const daysData = scheduleConfig.days ? { days: scheduleConfig.days } : { days: defaultConfig.days };
+      form.reset(daysData);
+    } else if (!isDocLoading && !scheduleConfig) {
+      form.reset(defaultConfig);
     }
   }, [scheduleConfig, isDocLoading, form]);
 
@@ -210,7 +268,7 @@ export default function LicenseScheduleConfigPage() {
         });
         return;
     }
-    setDocumentNonBlocking(scheduleRef, data, { merge: false });
+    updateDocumentNonBlocking(scheduleRef, { days: data.days });
     toast({
       title: 'Horarios de Licencias actualizados',
       description: 'La configuración de la agenda ha sido guardada correctamente.',
@@ -222,27 +280,32 @@ export default function LicenseScheduleConfigPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Configuración de Agenda para Licencias</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <Accordion type="multiple" className="w-full">
-              {(Object.keys(dayNames) as DayKey[]).map((dayKey) => (
-                <DayScheduleAccordion
-                  key={dayKey}
-                  dayKey={dayKey}
-                  dayName={dayNames[dayKey]}
-                  form={form}
-                />
-              ))}
-            </Accordion>
-            <Button type="submit">Guardar Cambios</Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+    <div className="space-y-8">
+        <Card>
+        <CardHeader>
+            <CardTitle>Configuración de Días y Horarios para Licencias</CardTitle>
+            <CardDescription>Define qué días de la semana se pueden sacar turnos y los horarios disponibles para cada uno.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <Accordion type="multiple" className="w-full">
+                {(Object.keys(dayNames) as DayKey[]).map((dayKey) => (
+                    <DayScheduleAccordion
+                    key={dayKey}
+                    dayKey={dayKey}
+                    dayName={dayNames[dayKey]}
+                    form={form}
+                    />
+                ))}
+                </Accordion>
+                <Button type="submit">Guardar Horarios Semanales</Button>
+            </form>
+            </Form>
+        </CardContent>
+        </Card>
+        
+        <BlockedDatesManager scheduleRef={scheduleRef} initialBlockedDates={scheduleConfig?.blockedDates} />
+    </div>
   );
 }

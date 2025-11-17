@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -254,16 +255,22 @@ export default function TurnosLicenciasPage() {
 
   useEffect(() => {
     if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
-      setAvailableSlots([]);
-      return;
+        setAvailableSlots([]);
+        return;
     }
 
     const dayKey = dayNamesInEnglish[selectedDate.getDay()];
     const dayConfig = scheduleConfig.days[dayKey];
 
     if (!dayConfig || !dayConfig.enabled) {
-      setAvailableSlots([]);
-      return;
+        setAvailableSlots([]);
+        return;
+    }
+
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    if (scheduleConfig.blockedDates?.includes(dateString)) {
+        setAvailableSlots([]);
+        return;
     }
     
     const appointmentsOnSelectedDate = (allAppointments || []).filter(
@@ -524,6 +531,11 @@ export default function TurnosLicenciasPage() {
                                             today.setHours(0, 0, 0, 0);
                                             if (date < today) return true;
                                             if (!scheduleConfig) return true;
+
+                                            const dateString = format(date, 'yyyy-MM-dd');
+                                            if (scheduleConfig.blockedDates?.includes(dateString)) {
+                                                return true;
+                                            }
 
                                             const dayKey = dayNamesInEnglish[date.getDay()];
                                             return !scheduleConfig.days[dayKey]?.enabled;
