@@ -8,13 +8,6 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background">
       <div className="text-center space-y-8">
-        <Image
-          src="https://www.tunuyan.gov.ar/site/wp-content/uploads/2025/06/logo_tunuyan_ciudad_del_agua.png"
-          alt="Logo Municipalidad de Tunuyán"
-          width={133}
-          height={50}
-          priority
-        />
         <div className="flex justify-center gap-4 pt-4">
           <Link href="/login" passHref>
             <Button>Iniciar Sesión</Button>
