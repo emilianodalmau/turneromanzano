@@ -11,8 +11,8 @@ export default function Home() {
         <Image
           src="https://www.tunuyan.gov.ar/site/wp-content/uploads/2025/06/logo_tunuyan_ciudad_del_agua.png"
           alt="Logo Municipalidad de Tunuyán"
-          width={400}
-          height={150}
+          width={133}
+          height={50}
           priority
         />
         <div className="flex justify-center gap-4 pt-4">
