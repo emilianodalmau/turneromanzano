@@ -84,8 +84,9 @@ export default function AgentPage() {
     const selectedDesk = desks?.find(d => d.id === selectedDeskId);
     const deskArea = areas?.find(a => a.id === selectedDesk?.areaId);
 
-    // Ensure both desk and area are found before rendering the AgentDesk
-    if (isLoading || !selectedDesk || !deskArea) {
+    // Render the agent desk only when both the desk and its area are defined.
+    // Otherwise, show a loading indicator.
+    if (!selectedDesk || !deskArea) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin" />
