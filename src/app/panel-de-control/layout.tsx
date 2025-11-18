@@ -48,10 +48,7 @@ export default function PanelDeControlLayout({
   return (
     <SidebarProvider>
       <Sidebar>
-        <div className="flex flex-col h-full">
-          <div className="p-4">
-            <h2 className="text-lg font-semibold text-sidebar-primary-foreground">Turnos Manzano</h2>
-          </div>
+        <div className="flex flex-col h-full pt-16">
           <SidebarMenu className="flex-1 p-2">
             <SidebarMenuItem>
               <Link href="/panel-de-control">
