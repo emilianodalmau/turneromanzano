@@ -57,7 +57,7 @@ export function AgentDesk({ desk, area, onExit }: AgentDeskProps) {
             where('areaId', '==', area.id)
             // Filters for status and ordering will be applied on the client side
         ) : null,
-        [firestore, area?.id]
+        [firestore, area?.id] // Safely depend on area.id
     );
 
     const { data: tickets, isLoading } = useCollection<QueueTicket>(ticketsQuery);

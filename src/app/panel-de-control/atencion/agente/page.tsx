@@ -37,9 +37,10 @@ export default function AgentPage() {
         setSelectedDeskId(deskId);
     };
 
-    const isLoading = isUserLoading || isLoadingDesks || isLoadingAreas;
+    const isLoadingInitialData = isUserLoading || isLoadingDesks || isLoadingAreas;
     
-    if (isLoading && !desks && !areas) {
+    // Initial loading state before anything is selected
+    if (isLoadingInitialData && !desks && !areas) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin" />
@@ -48,7 +49,7 @@ export default function AgentPage() {
         );
     }
 
-
+    // Desk selection view
     if (!selectedDeskId) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -72,7 +73,7 @@ export default function AgentPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                         {availableDesks.length === 0 && !isLoading && (
+                         {(availableDesks.length === 0 && !isLoadingDesks) && (
                             <p className="text-sm text-muted-foreground text-center">No hay escritorios configurados. Un administrador debe crearlos.</p>
                         )}
                     </CardContent>
@@ -81,11 +82,13 @@ export default function AgentPage() {
         );
     }
 
+    // After a desk is selected, find the desk and area data.
+    // This will re-evaluate whenever `desks` or `areas` data updates.
     const selectedDesk = desks?.find(d => d.id === selectedDeskId);
     const deskArea = areas?.find(a => a.id === selectedDesk?.areaId);
 
-    // Render the agent desk only when both the desk and its area are defined.
-    // Otherwise, show a loading indicator.
+    // If we have a deskId but haven't found the corresponding desk/area objects yet, show a loading screen.
+    // This handles the transition period where the selection is made but data might still be streaming in.
     if (!selectedDesk || !deskArea) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -95,6 +98,7 @@ export default function AgentPage() {
         );
     }
 
+    // Once both desk and area are fully resolved, render the AgentDesk component.
     return (
         <AgentDesk 
             desk={selectedDesk} 
