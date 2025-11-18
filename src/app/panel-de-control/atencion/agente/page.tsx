@@ -37,14 +37,17 @@ export default function AgentPage() {
         setSelectedDeskId(deskId);
     };
 
-    if (isUserLoading || isLoadingDesks || isLoadingAreas) {
+    const isLoading = isUserLoading || isLoadingDesks || isLoadingAreas;
+    
+    if (isLoading && !desks && !areas) {
         return (
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <p className="ml-2">Cargando...</p>
             </div>
         );
     }
+
 
     if (!selectedDeskId) {
         return (
@@ -69,7 +72,7 @@ export default function AgentPage() {
                                 ))}
                             </SelectContent>
                         </Select>
-                         {availableDesks.length === 0 && (
+                         {availableDesks.length === 0 && !isLoading && (
                             <p className="text-sm text-muted-foreground text-center">No hay escritorios configurados. Un administrador debe crearlos.</p>
                         )}
                     </CardContent>
@@ -81,10 +84,20 @@ export default function AgentPage() {
     const selectedDesk = desks?.find(d => d.id === selectedDeskId);
     const deskArea = areas?.find(a => a.id === selectedDesk?.areaId);
 
+    // Ensure both desk and area are found before rendering the AgentDesk
+    if (isLoading || !selectedDesk || !deskArea) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="ml-2">Cargando datos del puesto...</p>
+            </div>
+        );
+    }
+
     return (
         <AgentDesk 
-            desk={selectedDesk!} 
-            area={deskArea!}
+            desk={selectedDesk} 
+            area={deskArea}
             onExit={() => setSelectedDeskId('')} 
         />
     );

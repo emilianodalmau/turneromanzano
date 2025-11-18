@@ -52,12 +52,12 @@ export function AgentDesk({ desk, area, onExit }: AgentDeskProps) {
     const firestore = useFirestore();
 
     const ticketsQuery = useMemoFirebase(
-        () => firestore ? query(
+        () => (firestore && area?.id) ? query(
             collection(firestore, 'queueTickets'),
             where('areaId', '==', area.id)
             // Filters for status and ordering will be applied on the client side
         ) : null,
-        [firestore, area.id]
+        [firestore, area?.id]
     );
 
     const { data: tickets, isLoading } = useCollection<QueueTicket>(ticketsQuery);
@@ -171,7 +171,7 @@ export function AgentDesk({ desk, area, onExit }: AgentDeskProps) {
                         <CardHeader>
                             <CardTitle>Cola de Espera</CardTitle>
                             <CardDescription>
-                                {waitingTickets.length} persona(s) esperando en el área de {area.name}.
+                                {isLoading ? 'Cargando...' : `${waitingTickets.length} persona(s) esperando en el área de ${area.name}.`}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
