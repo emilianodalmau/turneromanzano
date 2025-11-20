@@ -196,6 +196,12 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                 <div className="p-4">
                      <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <FormItem>
+                                <FormLabel>Número de Referencia</FormLabel>
+                                <FormControl>
+                                    <Input value={appointment.referenceId} readOnly disabled />
+                                </FormControl>
+                            </FormItem>
                             <FormField control={form.control} name="schoolName" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Institución</FormLabel>
