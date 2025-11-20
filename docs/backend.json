@@ -58,6 +58,10 @@
           "type": "string",
           "description": "Unique identifier for the appointment."
         },
+        "referenceId": {
+            "type": "string",
+            "description": "A user-friendly, readable ID for the appointment."
+        },
         "userId": {
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Appointment)"
@@ -117,6 +121,7 @@
       },
       "required": [
         "id",
+        "referenceId",
         "userId",
         "date",
         "startTime",
@@ -379,5 +384,3 @@
     "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is central. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles. New collections for Areas, Desks, and QueueTickets are added to support the presential attention system."
   }
 }
-
-    

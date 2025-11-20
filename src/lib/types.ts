@@ -151,6 +151,7 @@ export interface Appointment extends Omit<MutableAppointment, 'id'> {
 export interface MutableAppointment {
   id: string;
   userId: string;
+  referenceId: string;
   date: string; // Stored as 'yyyy-MM-dd'
   startTime: string;
   endTime: string;
@@ -248,5 +249,3 @@ export const mendozaDepartments = [
     "Tunuyán",
     "Tupungato"
 ];
-
-    

@@ -368,7 +368,8 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                 const searchTerm = filters.searchText.toLowerCase();
                 const responsibleName = appointment.responsibleName.toLowerCase();
                 const schoolName = appointment.schoolName.toLowerCase();
-                const schoolEmail = appointment.schoolEmail.toLowerCase() || '';
+                const schoolEmail = appointment.schoolEmail?.toLowerCase() || '';
+                const referenceId = appointment.referenceId?.toLowerCase() || '';
                 const userDni = appointment.user?.dni.toLowerCase() || '';
                 const userEmail = appointment.user?.email.toLowerCase() || '';
                 const userPhone = appointment.user?.phone.toLowerCase() || '';
@@ -377,6 +378,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                     !responsibleName.includes(searchTerm) &&
                     !schoolName.includes(searchTerm) &&
                     !schoolEmail.includes(searchTerm) &&
+                    !referenceId.includes(searchTerm) &&
                     !userDni.includes(searchTerm) &&
                     !userEmail.includes(searchTerm) &&
                     !userPhone.includes(searchTerm)
@@ -528,8 +530,13 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                         {groupedAppointments[date].map((appointment) => (
                             <Card key={appointment.id}>
                                 <CardHeader>
-                                    <CardTitle>{`${appointment.startTime} - ${appointment.endTime}`}</CardTitle>
-                                    <CardDescription>{appointment.schoolName}</CardDescription>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle>{`${appointment.startTime} - ${appointment.endTime}`}</CardTitle>
+                                            <CardDescription>{appointment.schoolName}</CardDescription>
+                                        </div>
+                                        {appointment.referenceId && <Badge variant="outline">{appointment.referenceId}</Badge>}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <p className="text-sm text-muted-foreground">Responsable: {appointment.responsibleName}</p>
@@ -602,5 +609,3 @@ export default function GestionTurnosPage() {
 
     return <AppointmentList appointments={appointments || []} users={users || []} />;
 }
-
-    

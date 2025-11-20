@@ -22,7 +22,7 @@ import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartment
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, PartyPopper } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
@@ -124,7 +124,7 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
     );
 }
 
-function SuccessStep({ appointmentId, onReset }: { appointmentId: string, onReset: () => void }) {
+function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: () => void }) {
     return (
         <Card className="max-w-2xl mx-auto text-center">
             <CardHeader>
@@ -138,7 +138,7 @@ function SuccessStep({ appointmentId, onReset }: { appointmentId: string, onRese
             </CardHeader>
             <CardContent>
                 <p className="text-lg">Tu número de referencia de turno es:</p>
-                <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{appointmentId}</p>
+                <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{referenceId}</p>
                 <p className="text-sm text-muted-foreground mt-4">Por favor, guarda este número para futuras consultas.</p>
             </CardContent>
             <CardFooter className="flex justify-center">
@@ -154,7 +154,7 @@ export default function TurnosPage() {
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [step, setStep] = useState<'terms' | 'form' | 'success'>('terms');
-  const [submittedAppointmentId, setSubmittedAppointmentId] = useState<string | null>(null);
+  const [submittedReferenceId, setSubmittedReferenceId] = useState<string | null>(null);
 
   const scheduleRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
@@ -240,9 +240,11 @@ export default function TurnosPage() {
     try {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
+        const referenceId = generateReadableId();
 
         const newAppointmentRequest: Omit<Appointment, 'id'> = {
             userId: userId,
+            referenceId: referenceId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
@@ -258,7 +260,6 @@ export default function TurnosPage() {
         };
 
         const appointmentsCollection = collection(firestore, 'appointments');
-        // Await the promise to get the document reference
         const appointmentDocRef = await addDocumentNonBlocking(appointmentsCollection, newAppointmentRequest);
         
         if (appointmentDocRef) {
@@ -272,8 +273,7 @@ export default function TurnosPage() {
           };
           setDocumentNonBlocking(userRef, userProfile, { merge: true });
           
-          // Set the ID and change the step to 'success'
-          setSubmittedAppointmentId(appointmentDocRef.id);
+          setSubmittedReferenceId(referenceId);
           setStep('success');
         } else {
              throw new Error("No se pudo obtener la referencia del documento del turno.");
@@ -293,7 +293,7 @@ export default function TurnosPage() {
   
   const handleReset = () => {
     form.reset();
-    setSubmittedAppointmentId(null);
+    setSubmittedReferenceId(null);
     setStep('terms');
   }
 
@@ -305,10 +305,10 @@ export default function TurnosPage() {
       );
   }
 
-  if (step === 'success' && submittedAppointmentId) {
+  if (step === 'success' && submittedReferenceId) {
     return (
       <div className="container mx-auto p-4 md:p-8">
-        <SuccessStep appointmentId={submittedAppointmentId} onReset={handleReset} />
+        <SuccessStep referenceId={submittedReferenceId} onReset={handleReset} />
       </div>
     );
   }
@@ -581,5 +581,3 @@ export default function TurnosPage() {
     </div>
   );
 }
-
-    
