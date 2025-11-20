@@ -40,7 +40,7 @@ const formSchema = z.object({
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   schoolDepartment: z.string().min(1, 'Debe seleccionar un departamento.'),
   schoolEmail: z.string().min(1, { message: "El email de la institución es requerido." }).email('El email de la institución no es válido.'),
-  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(50, 'El máximo es 50 visitantes.'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'El máximo es 50 alumnos.'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
   }),
@@ -309,12 +309,12 @@ export default function TurnosPage() {
                                 </FormItem>
                             )}
                         />
-                        <FormField
+                         <FormField
                             control={form.control}
                             name="visitorCount"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Cantidad de visitantes</FormLabel>
+                                <FormLabel>Cantidad de alumnos</FormLabel>
                                 <FormControl>
                                     <Input type="number" min="1" max="50" placeholder="Ej: 25" {...field} />
                                 </FormControl>

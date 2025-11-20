@@ -47,7 +47,7 @@ const editFormSchema = z.object({
   responsibleName: z.string().min(1, 'El nombre es requerido.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   schoolEmail: z.string().email('El email de la institución no es válido.'),
-  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(70, 'El máximo es 70 alumnos.'),
   date: z.date({ required_error: 'Se requiere una fecha para la visita.' }),
   timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
   status: z.enum(['pending', 'confirmed', 'cancelled']),
@@ -246,7 +246,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                             )}/>
                             <FormField control={form.control} name="visitorCount" render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Visitantes</FormLabel>
+                                    <FormLabel>Cantidad de Alumnos</FormLabel>
                                     <FormControl><Input type="number" {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -534,7 +534,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                                 <CardContent className="space-y-4">
                                     <p className="text-sm text-muted-foreground">Responsable: {appointment.responsibleName}</p>
                                     {appointment.schoolEmail && <p className="text-sm text-muted-foreground">Email Inst: {appointment.schoolEmail}</p>}
-                                    <p className="text-sm text-muted-foreground">Visitantes: {appointment.visitorCount}</p>
+                                    <p className="text-sm text-muted-foreground">Alumnos: {appointment.visitorCount}</p>
                                     <div className="flex items-center">
                                         <p className="text-sm text-muted-foreground mr-2">Estado:</p>
                                         <Badge variant={getStatusVariant(appointment.status)}>{getStatusText(appointment.status)}</Badge>

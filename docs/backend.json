@@ -94,7 +94,7 @@
         },
         "visitorCount": {
             "type": "number",
-            "description": "Number of people in the visiting group."
+            "description": "Number of students in the visiting group."
         },
         "status": {
             "type": "string",
