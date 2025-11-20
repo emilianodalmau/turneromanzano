@@ -256,6 +256,9 @@ export default function TurnosPage() {
                 <li>El máximo de alumnos es de 50 en total por turno.</li>
                 <li>Con la posibilidad de llevar hasta 6 acompañantes.</li>
             </ul>
+            <p className="text-destructive font-bold mt-2">
+                El tiempo límite de tolerancia es de 10 minutos, por favor no comprometa al personal.
+            </p>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -471,3 +474,5 @@ export default function TurnosPage() {
     </div>
   );
 }
+
+    
