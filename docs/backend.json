@@ -117,6 +117,11 @@
             "type": "string",
             "description": "The timestamp when the appointment was created.",
             "format": "date-time"
+        },
+        "paymentProofUrl": {
+            "type": "string",
+            "description": "URL to the uploaded payment proof in Firebase Storage.",
+            "format": "uri"
         }
       },
       "required": [

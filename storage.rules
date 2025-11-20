@@ -8,6 +8,12 @@ service firebase.storage {
     match /license-documents/{allPaths=**} {
       allow write: if true;
     }
+    
+    // Nueva regla para permitir la carga de comprobantes de pago de turnos del museo
+    match /payment-proofs/{allPaths=**} {
+      allow write: if true;
+    }
+
 
     // Por defecto, se deniega la lectura y escritura a cualquier otra ruta para
     // mantener la seguridad del resto del bucket.

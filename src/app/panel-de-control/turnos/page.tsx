@@ -37,7 +37,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Search, X as XIcon } from 'lucide-react';
+import { CalendarIcon, Search, X as XIcon, FileText } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
@@ -47,7 +47,7 @@ const editFormSchema = z.object({
   responsibleName: z.string().min(1, 'El nombre es requerido.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   schoolEmail: z.string().email('El email de la institución no es válido.'),
-  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(70, 'Para mas de 50 alumnos tiene que sacar otro turno'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'Para mas de 50 alumnos tiene que sacar otro turno'),
   date: z.date({ required_error: 'Se requiere una fecha para la visita.' }),
   timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
   status: z.enum(['pending', 'confirmed', 'cancelled']),
@@ -554,6 +554,14 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                                         />
                                         <Label htmlFor={`paid-switch-${appointment.id}`}>Pagado</Label>
                                     </div>
+                                     {appointment.paymentProofUrl && (
+                                        <a href={appointment.paymentProofUrl} target="_blank" rel="noopener noreferrer">
+                                            <Button variant="secondary" className="w-full">
+                                                <FileText className="mr-2 h-4 w-4" />
+                                                Ver Comprobante
+                                            </Button>
+                                        </a>
+                                    )}
                                 </CardContent>
                                 <CardFooter className="flex gap-2">
                                     <EditAppointmentSheet appointment={appointment} />

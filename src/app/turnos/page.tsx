@@ -17,21 +17,24 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, PartyPopper, Copy } from 'lucide-react';
+import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { uploadFile } from '@/firebase/storage';
 
-// Schema de validación con el campo de fecha y hora
+
+// --- ZOD SCHEMAS ---
 const formSchema = z.object({
   name: z.string().min(1, 'El nombre es requerido.'),
   lastName: z.string().min(1, 'El apellido es requerido.'),
@@ -49,9 +52,44 @@ const formSchema = z.object({
   timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const uploadSchema = z.object({
+    referenceId: z.string().min(8, 'El número de referencia no es válido.'),
+    paymentProof: z.instanceof(File, { message: 'Se requiere el archivo del comprobante.' })
+        .refine(file => file.size < 5 * 1024 * 1024, 'El archivo no debe exceder los 5MB.')
+});
 
-function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
+
+type FormValues = z.infer<typeof formSchema>;
+type UploadValues = z.infer<typeof uploadSchema>;
+
+
+function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'upload') => void }) {
+    return (
+        <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+                <CardTitle className="text-2xl md:text-3xl text-center">Gestión de Turnos para el Museo</CardTitle>
+                <CardDescription className="text-center pt-2">
+                    ¿Qué deseas hacer?
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Button onClick={() => onSelectOption('new')} variant="default" className="h-24 text-lg">
+                    Solicitar un Nuevo Turno
+                </Button>
+                <Button onClick={() => onSelectOption('upload')} variant="outline" className="h-24 text-lg">
+                    Subir Comprobante de Pago
+                </Button>
+            </CardContent>
+             <CardFooter>
+                <Link href="/" className="w-full">
+                    <Button variant="link" className="w-full">Volver a la página principal</Button>
+                </Link>
+            </CardFooter>
+        </Card>
+    );
+}
+
+function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void, onBack: () => void }) {
     const [accepted, setAccepted] = useState(false);
 
     return (
@@ -112,10 +150,8 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
                     </label>
                 </div>
 
-                <div className="flex justify-end gap-4">
-                     <Link href="/" passHref>
-                        <Button variant="outline">Cancelar</Button>
-                    </Link>
+                <div className="flex justify-between gap-4">
+                     <Button variant="outline" onClick={onBack}>Volver</Button>
                     <Button onClick={onAccepted} disabled={!accepted}>
                         Siguiente
                     </Button>
@@ -160,7 +196,13 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
                  <div>
                     <p className="text-lg">Tu número de referencia de turno es:</p>
                     <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{referenceId}</p>
-                    <p className="text-sm text-muted-foreground mt-4">Por favor, guarda este número para futuras consultas.</p>
+                     <Alert variant="destructive" className="mt-4 text-left">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle className="font-bold">Importante</AlertTitle>
+                        <AlertDescription>
+                          Por favor, guarda este número para poder subir el comprobante de pago.
+                        </AlertDescription>
+                    </Alert>
                 </div>
                 
                 <Separator />
@@ -168,7 +210,7 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
                 <div className="text-left space-y-4">
                     <h4 className="font-semibold text-lg text-center">Datos para el Pago</h4>
                     <p className="text-muted-foreground">
-                        Para confirmar tu reserva, realiza la transferencia o depósito al siguiente CBU. Una vez realizado el pago, envia el comprobante junto con tu número de referencia a <span className="font-semibold text-primary">desarrolloturísticotunuyan@gmail.com</span>.
+                        Para confirmar tu reserva, realiza la transferencia o depósito al siguiente CBU. Una vez realizado el pago, vuelve a esta página y selecciona "Subir Comprobante de Pago".
                     </p>
                     <div>
                         <p className="text-sm font-medium">CBU:</p>
@@ -191,12 +233,134 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
     );
 }
 
+function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUploadSuccess: (referenceId: string) => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const form = useForm<UploadValues>({ resolver: zodResolver(uploadSchema) });
+    const { isSubmitting } = form.formState;
+
+    async function onSubmit(data: UploadValues) {
+        if (!firestore) return;
+
+        const appointmentsCollection = collection(firestore, 'appointments');
+        const q = query(appointmentsCollection, where("referenceId", "==", data.referenceId), limit(1));
+        
+        try {
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                form.setError("referenceId", { type: "manual", message: "No se encontró ningún turno con ese número de referencia." });
+                return;
+            }
+            
+            const appointmentDoc = querySnapshot.docs[0];
+            const appointmentData = appointmentDoc.data() as Appointment;
+            
+            const filePath = `payment-proofs/${appointmentData.id}/${data.paymentProof.name}`;
+            const downloadURL = await uploadFile(data.paymentProof, filePath);
+            
+            await setDocumentNonBlocking(appointmentDoc.ref, { paymentProofUrl: downloadURL }, { merge: true });
+            
+            onUploadSuccess(data.referenceId);
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: "Error al subir el comprobante",
+                description: "Ocurrió un problema al subir el archivo. Por favor, inténtalo de nuevo.",
+                variant: "destructive"
+            });
+        }
+    }
+
+    return (
+         <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+                <CardTitle className="text-2xl md:text-3xl">Subir Comprobante de Pago</CardTitle>
+                <CardDescription>
+                    Ingresa tu número de referencia y adjunta el comprobante de pago para confirmar tu turno.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="referenceId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Número de Referencia</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Ej: aB3x-8fG1" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="paymentProof"
+                            render={({ field: { onChange, value, ...rest } }) => (
+                                <FormItem>
+                                    <FormLabel>Archivo del Comprobante</FormLabel>
+                                    <FormControl>
+                                       <Input type="file" onChange={e => onChange(e.target.files?.[0])} {...rest} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <div className="flex justify-between gap-4">
+                            <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
+                                Volver
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Subiendo...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Subir Comprobante
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                </Form>
+            </CardContent>
+        </Card>
+    );
+}
+
+function UploadSuccessStep({ referenceId, onReset }: { referenceId: string, onReset: () => void }) {
+    return (
+        <Card className="max-w-2xl mx-auto text-center">
+            <CardHeader>
+                <div className="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
+                    <FileCheck className="h-10 w-10 text-green-600" />
+                </div>
+                <CardTitle className="text-2xl md:text-3xl mt-4">¡Comprobante Subido!</CardTitle>
+                <CardDescription>
+                    Recibimos tu comprobante para el turno <span className="font-bold">{referenceId}</span>. Lo verificaremos a la brevedad.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p>Tu turno será confirmado una vez que el pago sea verificado por nuestro equipo. Recibirás una notificación por correo electrónico.</p>
+            </CardContent>
+            <CardFooter className="flex justify-center">
+                <Button onClick={onReset}>Volver al Inicio</Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
 
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [step, setStep] = useState<'terms' | 'form' | 'success'>('terms');
+  const [step, setStep] = useState<'initial' | 'terms' | 'form' | 'success' | 'upload' | 'upload_success'>('initial');
   const [submittedReferenceId, setSubmittedReferenceId] = useState<string | null>(null);
 
   const scheduleRef = useMemoFirebase(
@@ -285,7 +449,7 @@ export default function TurnosPage() {
         const userRef = doc(firestore, 'users', userId);
         const referenceId = generateReadableId();
 
-        const newAppointmentRequest: Omit<Appointment, 'id'> = {
+        const newAppointmentRequest: Omit<Appointment, 'id' | 'paymentProofUrl'> = {
             userId: userId,
             referenceId: referenceId,
             date: format(data.date, 'yyyy-MM-dd'),
@@ -337,292 +501,308 @@ export default function TurnosPage() {
   const handleReset = () => {
     form.reset();
     setSubmittedReferenceId(null);
-    setStep('terms');
+    setStep('initial');
+  }
+  
+  const handleSelectOption = (option: 'new' | 'upload') => {
+    if (option === 'new') {
+        setStep('terms');
+    } else {
+        setStep('upload');
+    }
+  };
+
+  const handleUploadSuccess = (referenceId: string) => {
+    setSubmittedReferenceId(referenceId);
+    setStep('upload_success');
   }
 
-  if (step === 'terms') {
-      return (
-          <div className="container mx-auto p-4 md:p-8">
-              <TermsAndConditionsStep onAccepted={() => setStep('form')} />
-          </div>
-      );
-  }
+  const renderStep = () => {
+    switch (step) {
+        case 'initial':
+            return <InitialStep onSelectOption={handleSelectOption} />;
+        case 'terms':
+            return <TermsAndConditionsStep onAccepted={() => setStep('form')} onBack={() => setStep('initial')} />;
+        case 'upload':
+            return <UploadProofStep onBack={() => setStep('initial')} onUploadSuccess={handleUploadSuccess} />;
+        case 'upload_success':
+             return <UploadSuccessStep referenceId={submittedReferenceId!} onReset={handleReset} />;
+        case 'success':
+            return <SuccessStep referenceId={submittedReferenceId!} onReset={handleReset} />;
+        case 'form':
+            return (
+                <Card className="max-w-4xl mx-auto">
+                    <CardHeader>
+                    <CardTitle className="text-3xl">Programa de Turismo Educativo 2026</CardTitle>
+                    <CardDescription>
+                        <p className="font-bold">Leer atentamente:</p>
+                        <ul className="list-disc list-inside text-muted-foreground mt-2">
+                            <li>El Programa de Turismo Educativo 2026 es a partir de los 8 años.</li>
+                            <li>La visita es guiada por el Parque Temático Sanmartiniano.</li>
+                            <li>El máximo de alumnos es de 50 en total por turno.</li>
+                            <li>Con la posibilidad de llevar hasta 6 acompañantes.</li>
+                        </ul>
+                        <p className="text-destructive font-bold mt-2">
+                            El tiempo límite de tolerancia es de 10 minutos, por favor no comprometa al personal.
+                        </p>
+                    </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-medium">Datos de la Visita</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField
+                                    control={form.control}
+                                    name="schoolName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Nombre de la escuela o institución</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: Escuela N°1" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="visitorCount"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Cantidad de alumnos</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" min="1" max="50" placeholder="Ej: 25" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="date"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                        <FormLabel>Fecha de la visita</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "w-full pl-3 text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                                >
+                                                {field.value ? (
+                                                    format(field.value, "PPP", { locale: es })
+                                                ) : (
+                                                    <span>Selecciona una fecha</span>
+                                                )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                disabled={(date) => {
+                                                    if (isScheduleLoading) return true;
+                                                    const today = new Date();
+                                                    today.setHours(0, 0, 0, 0);
+                                                    if (date < today) return true;
 
-  if (step === 'success' && submittedReferenceId) {
-    return (
-      <div className="container mx-auto p-4 md:p-8">
-        <SuccessStep referenceId={submittedReferenceId} onReset={handleReset} />
-      </div>
-    );
+                                                    const dateString = format(date, 'yyyy-MM-dd');
+                                                    if (scheduleConfig?.blockedDates?.includes(dateString)) {
+                                                        return true;
+                                                    }
+
+                                                    const dayKey = dayNamesInEnglish[date.getDay()];
+                                                    if (!scheduleConfig?.days[dayKey]?.enabled) {
+                                                        return true;
+                                                    }
+                                                    
+                                                    return false;
+                                                }}
+                                                initialFocus
+                                            />
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="timeSlot"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Horario disponible</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
+                                            <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona un horario" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            {availableSlots.map(slot => (
+                                                <SelectItem key={slot.startTime} value={slot.startTime}>
+                                                    {`${slot.startTime} - ${slot.endTime}`}
+                                                </SelectItem>
+                                            ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
+                                        {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="schoolDepartment"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Departamento de la institución</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecciona un departamento" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {mendozaDepartments.map(dep => (
+                                                        <SelectItem key={dep} value={dep}>
+                                                            {dep}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="schoolEmail"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Email de la institución</FormLabel>
+                                        <FormControl>
+                                            <Input type="email" placeholder="contacto@escuela.com" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="higherAuthorityName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Nombre de Autoridad Superior</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: Directora Ana María" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-medium">Datos del Responsable de la salida</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField
+                                    control={form.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Nombre</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: Juan" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+                                <FormField
+                                    control={form.control}
+                                    name="lastName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Apellido</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: Pérez" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="dni"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>DNI del responsable</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: 30123456" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Email de contacto</FormLabel>
+                                        <FormControl>
+                                            <Input type="email" placeholder="ejemplo@correo.com" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="phone"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Teléfono de contacto</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: 1122334455" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-4">
+                            <Button type="submit" className="w-full">Enviar Solicitud</Button>
+                            <Button type="button" variant="outline" className="w-full" onClick={() => setStep('terms')}>Volver</Button>
+                        </div>
+                    </form>
+                    </Form>
+                    </CardContent>
+                </Card>
+            );
+        default:
+            return null;
+    }
   }
 
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-3xl">Programa de Turismo Educativo 2026</CardTitle>
-          <CardDescription>
-            <p className="font-bold">Leer atentamente:</p>
-            <ul className="list-disc list-inside text-muted-foreground mt-2">
-                <li>El Programa de Turismo Educativo 2026 es a partir de los 8 años.</li>
-                <li>La visita es guiada por el Parque Temático Sanmartiniano.</li>
-                <li>El máximo de alumnos es de 50 en total por turno.</li>
-                <li>Con la posibilidad de llevar hasta 6 acompañantes.</li>
-            </ul>
-            <p className="text-destructive font-bold mt-2">
-                El tiempo límite de tolerancia es de 10 minutos, por favor no comprometa al personal.
-            </p>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Datos de la Visita</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <FormField
-                            control={form.control}
-                            name="schoolName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nombre de la escuela o institución</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Escuela N°1" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="visitorCount"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Cantidad de alumnos</FormLabel>
-                                <FormControl>
-                                    <Input type="number" min="1" max="50" placeholder="Ej: 25" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="date"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Fecha de la visita</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "w-full pl-3 text-left font-normal",
-                                            !field.value && "text-muted-foreground"
-                                        )}
-                                        >
-                                        {field.value ? (
-                                            format(field.value, "PPP", { locale: es })
-                                        ) : (
-                                            <span>Selecciona una fecha</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) => {
-                                            if (isScheduleLoading) return true;
-                                            const today = new Date();
-                                            today.setHours(0, 0, 0, 0);
-                                            if (date < today) return true;
-
-                                            const dateString = format(date, 'yyyy-MM-dd');
-                                            if (scheduleConfig?.blockedDates?.includes(dateString)) {
-                                                return true;
-                                            }
-
-                                            const dayKey = dayNamesInEnglish[date.getDay()];
-                                            if (!scheduleConfig?.days[dayKey]?.enabled) {
-                                                return true;
-                                            }
-                                            
-                                            return false;
-                                        }}
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="timeSlot"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Horario disponible</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecciona un horario" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {availableSlots.map(slot => (
-                                        <SelectItem key={slot.startTime} value={slot.startTime}>
-                                            {`${slot.startTime} - ${slot.endTime}`}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
-                                {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="schoolDepartment"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Departamento de la institución</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecciona un departamento" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {mendozaDepartments.map(dep => (
-                                                <SelectItem key={dep} value={dep}>
-                                                    {dep}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="schoolEmail"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Email de la institución</FormLabel>
-                                <FormControl>
-                                    <Input type="email" placeholder="contacto@escuela.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="higherAuthorityName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nombre de Autoridad Superior</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Directora Ana María" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Datos del Responsable de la salida</h3>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nombre</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Juan" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        <FormField
-                            control={form.control}
-                            name="lastName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Apellido</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Pérez" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="dni"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>DNI del responsable</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: 30123456" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Email de contacto</FormLabel>
-                                <FormControl>
-                                    <Input type="email" placeholder="ejemplo@correo.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="phone"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Teléfono de contacto</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: 1122334455" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-4">
-                    <Button type="submit" className="w-full">Enviar Solicitud</Button>
-                     <Button type="button" variant="outline" className="w-full" onClick={() => setStep('terms')}>Volver</Button>
-                </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+        {renderStep()}
     </div>
   );
 }
-
-    

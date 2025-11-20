@@ -164,6 +164,7 @@ export interface MutableAppointment {
   status: 'pending' | 'confirmed' | 'cancelled';
   paid?: boolean;
   createdAt: string;
+  paymentProofUrl?: string; // URL to the uploaded payment proof in Firebase Storage
 }
 
 export interface User {
