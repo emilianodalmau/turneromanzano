@@ -28,6 +28,7 @@ import { es } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Schema de validación con el campo de fecha y hora
 const formSchema = z.object({
@@ -47,10 +48,60 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
+    const [accepted, setAccepted] = useState(false);
+
+    return (
+        <Card className="max-w-4xl mx-auto">
+            <CardHeader>
+                <CardTitle className="text-2xl md:text-3xl">Aceptación de condiciones y términos que emanan del Programa de Turismo Educativo</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <p className="text-muted-foreground">
+                    El Programa de Turismo Educativo en Argentina tiene como objetivo que los estudiantes de todas las escuelas, especialmente aquellos de sectores vulnerables, conozcan y comprendan la diversidad geográfica y cultural del país. Este programa incluye actividades sociorecreativas y formativas, y se implementa con el apoyo de los Ministerios de Educación y Turismo de la Nación.
+                </p>
+                <div className="space-y-2 text-muted-foreground">
+                    <p>Las condiciones y términos del programa incluyen:</p>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li><span className="font-semibold">Certificación de Agencias:</span> Las agencias de viajes deben contar con un "Certificado Nacional de Autorización para Agencias de Turismo Estudiantil".</li>
+                        <li><span className="font-semibold">Requisitos para Organizadores:</span> Las agencias deben cumplir con ciertos requisitos de seguridad y calidad en los viajes educativos.</li>
+                        <li><span className="font-semibold">Protección al Estudiante:</span> Se establecen medidas para garantizar la seguridad y el bienestar de los estudiantes durante sus viajes.</li>
+                        <li><span className="font-semibold">Promoción del Turismo Interno:</span> El programa fomenta el conocimiento y aprecio por los destinos turísticos de Argentina.</li>
+                    </ul>
+                </div>
+                <p className="text-muted-foreground">
+                    Este programa busca no solo ofrecer experiencias educativas, sino también promover la inclusión y el respeto por la diversidad cultural.
+                </p>
+
+                <div className="flex items-center space-x-2 pt-4">
+                    <Checkbox id="terms" checked={accepted} onCheckedChange={(checked) => setAccepted(checked as boolean)} />
+                    <label
+                        htmlFor="terms"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        Acepto las condiciones
+                    </label>
+                </div>
+
+                <div className="flex justify-end gap-4">
+                     <Link href="/" passHref>
+                        <Button variant="outline">Cancelar</Button>
+                    </Link>
+                    <Button onClick={onAccepted} disabled={!accepted}>
+                        Siguiente
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [step, setStep] = useState<'terms' | 'form'>('terms');
 
   const scheduleRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
@@ -96,7 +147,6 @@ export default function TurnosPage() {
       return;
     }
     
-    // Check if the date is in the blockedDates array
     const dateString = format(selectedDate, 'yyyy-MM-dd');
     if (scheduleConfig.blockedDates?.includes(dateString)) {
         setAvailableSlots([]);
@@ -171,6 +221,7 @@ export default function TurnosPage() {
             description: 'Hemos recibido tu solicitud. Nos pondremos en contacto para confirmar la visita.',
         });
         form.reset();
+        setStep('terms'); // Go back to terms after submission
     } catch (error) {
         console.error('Error al guardar la solicitud de turno:', error);
         toast({
@@ -182,6 +233,15 @@ export default function TurnosPage() {
 }
 
   const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  
+  if (step === 'terms') {
+      return (
+          <div className="container mx-auto p-4 md:p-8">
+              <TermsAndConditionsStep onAccepted={() => setStep('form')} />
+          </div>
+      );
+  }
+
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -394,9 +454,7 @@ export default function TurnosPage() {
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <Button type="submit" className="w-full">Enviar Solicitud</Button>
-                    <Link href="/" passHref className="w-full">
-                        <Button variant="outline" className="w-full">Cancelar</Button>
-                    </Link>
+                     <Button type="button" variant="outline" className="w-full" onClick={() => setStep('terms')}>Volver</Button>
                 </div>
             </form>
           </Form>
@@ -405,6 +463,3 @@ export default function TurnosPage() {
     </div>
   );
 }
-
-    
-    
