@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2 } from 'lucide-react';
@@ -236,7 +236,13 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
 function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUploadSuccess: (referenceId: string) => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const form = useForm<UploadValues>({ resolver: zodResolver(uploadSchema) });
+    const form = useForm<UploadValues>({ 
+        resolver: zodResolver(uploadSchema),
+        defaultValues: {
+            referenceId: '',
+            paymentProof: undefined,
+        }
+    });
     const { isSubmitting } = form.formState;
 
     async function onSubmit(data: UploadValues) {
