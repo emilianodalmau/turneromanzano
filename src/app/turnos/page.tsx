@@ -461,7 +461,7 @@ export default function TurnosPage() {
                 </div>
 
                 <div className="space-y-4">
-                    <h3 className="text-lg font-medium">Datos del Responsable</h3>
+                    <h3 className="text-lg font-medium">Datos del Responsable de la salida</h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
@@ -542,5 +542,7 @@ export default function TurnosPage() {
     </div>
   );
 }
+
+    
 
     
