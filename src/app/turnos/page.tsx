@@ -298,6 +298,19 @@ export default function TurnosPage() {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
+                            name="schoolName"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Nombre de la escuela o institución</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ej: Escuela N°1" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
                             name="visitorCount"
                             render={({ field }) => (
                                 <FormItem>
@@ -387,19 +400,6 @@ export default function TurnosPage() {
                                 </Select>
                                 {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
                                 {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="schoolName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nombre de la escuela o institución</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Escuela N°1" {...field} />
-                                </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
