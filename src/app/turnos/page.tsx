@@ -261,7 +261,7 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
             const appointmentDoc = querySnapshot.docs[0];
             const appointmentData = appointmentDoc.data() as Appointment;
             
-            const filePath = `payment-proofs/${appointmentData.id}/${data.paymentProof.name}`;
+            const filePath = `comprobantesPago/${appointmentDoc.id}/${data.paymentProof.name}`;
             const downloadURL = await uploadFile(data.paymentProof, filePath);
             
             await setDocumentNonBlocking(appointmentDoc.ref, { paymentProofUrl: downloadURL }, { merge: true });

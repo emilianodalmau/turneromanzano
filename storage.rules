@@ -10,7 +10,7 @@ service firebase.storage {
     }
     
     // Nueva regla para permitir la carga de comprobantes de pago de turnos del museo
-    match /payment-proofs/{allPaths=**} {
+    match /comprobantesPago/{allPaths=**} {
       allow write: if true;
     }
 
