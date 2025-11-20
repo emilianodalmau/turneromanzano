@@ -15,12 +15,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, PartyPopper } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -59,7 +59,7 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
                 <CardTitle className="text-2xl md:text-3xl">Aceptación de condiciones y términos que emanan del Programa de Turismo Educativo</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="space-y-4 text-muted-foreground">
+                <div className="space-y-4 text-muted-foreground prose-sm prose-p:my-2 prose-headings:my-4 max-h-[60vh] overflow-y-auto pr-4">
                     <h3 className="text-lg font-semibold text-foreground">Programa de Turismo Educativo 2026: “Un viaje a la naturaleza y la historia de Los Chacayes”</h3>
                     <p>Estimada/o docente,</p>
                     <p>Desde la Dirección de Turismo de Tunuyán, nos complace presentarles nuestro Programa de Turismo Educativo: "Un viaje a la naturaleza y la historia de Los Chacayes". Una experiencia diseñada para enriquecer el aprendizaje de sus estudiantes y conectar con el valioso patrimonio de nuestra región.</p>
@@ -72,12 +72,12 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
                     <div>
                         <h4 className="font-semibold text-foreground">Cómo concretar su visita:</h4>
                         <p>Para asegurar una organización eficiente y una experiencia inolvidable, les pedimos seguir estos sencillos pasos:</p>
-                        <ul className="list-decimal pl-5 mt-2 space-y-1">
+                        <ol className="list-decimal pl-5 mt-2 space-y-1">
                             <li>Consultar y elegir la fecha y hora en el siguiente paso.</li>
                             <li>Completar el formulario de reserva.</li>
                             <li>Realizar el pago: Tras la recepción y aceptación de su formulario, le indicaremos cómo proceder con el abono del programa.</li>
                             <li>Coordinar el transporte: Contrate el servicio de transporte que los conducirá hasta el Paraje Manzano Histórico.</li>
-                        </ul>
+                        </ol>
                          <p className="mt-2">El día de la visita, nuestro equipo de guías los estará esperando en la puerta de los museos para iniciar esta fascinante experiencia.</p>
                     </div>
                      <div>
@@ -124,12 +124,37 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
     );
 }
 
+function SuccessStep({ appointmentId, onReset }: { appointmentId: string, onReset: () => void }) {
+    return (
+        <Card className="max-w-2xl mx-auto text-center">
+            <CardHeader>
+                <div className="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
+                    <PartyPopper className="h-10 w-10 text-green-600" />
+                </div>
+                <CardTitle className="text-2xl md:text-3xl mt-4">¡Solicitud Enviada con Éxito!</CardTitle>
+                <CardDescription>
+                    Hemos recibido tu solicitud de turno. Nos pondremos en contacto a la brevedad para confirmar todos los detalles.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className="text-lg">Tu número de referencia de turno es:</p>
+                <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{appointmentId}</p>
+                <p className="text-sm text-muted-foreground mt-4">Por favor, guarda este número para futuras consultas.</p>
+            </CardContent>
+            <CardFooter className="flex justify-center">
+                <Button onClick={onReset}>Solicitar Otro Turno</Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
 
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [step, setStep] = useState<'terms' | 'form'>('terms');
+  const [step, setStep] = useState<'terms' | 'form' | 'success'>('terms');
+  const [submittedAppointmentId, setSubmittedAppointmentId] = useState<string | null>(null);
 
   const scheduleRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
@@ -216,7 +241,7 @@ export default function TurnosPage() {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
 
-        const newAppointmentRequest = {
+        const newAppointmentRequest: Omit<Appointment, 'id'> = {
             userId: userId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
@@ -233,27 +258,27 @@ export default function TurnosPage() {
         };
 
         const appointmentsCollection = collection(firestore, 'appointments');
+        // Await the promise to get the document reference
         const appointmentDocRef = await addDocumentNonBlocking(appointmentsCollection, newAppointmentRequest);
         
-        const userProfile = {
-            id: userId,
-            name: data.name,
-            lastName: data.lastName,
-            dni: data.dni,
-            phone: data.phone,
-            email: data.email,
-        };
-        
         if (appointmentDocRef) {
+          const userProfile = {
+              id: userId,
+              name: data.name,
+              lastName: data.lastName,
+              dni: data.dni,
+              phone: data.phone,
+              email: data.email,
+          };
           setDocumentNonBlocking(userRef, userProfile, { merge: true });
+          
+          // Set the ID and change the step to 'success'
+          setSubmittedAppointmentId(appointmentDocRef.id);
+          setStep('success');
+        } else {
+             throw new Error("No se pudo obtener la referencia del documento del turno.");
         }
 
-        toast({
-            title: 'Solicitud de Turno Enviada',
-            description: 'Hemos recibido tu solicitud. Nos pondremos en contacto para confirmar la visita.',
-        });
-        form.reset();
-        setStep('terms'); // Go back to terms after submission
     } catch (error) {
         console.error('Error al guardar la solicitud de turno:', error);
         toast({
@@ -266,12 +291,26 @@ export default function TurnosPage() {
 
   const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   
+  const handleReset = () => {
+    form.reset();
+    setSubmittedAppointmentId(null);
+    setStep('terms');
+  }
+
   if (step === 'terms') {
       return (
           <div className="container mx-auto p-4 md:p-8">
               <TermsAndConditionsStep onAccepted={() => setStep('form')} />
           </div>
       );
+  }
+
+  if (step === 'success' && submittedAppointmentId) {
+    return (
+      <div className="container mx-auto p-4 md:p-8">
+        <SuccessStep appointmentId={submittedAppointmentId} onReset={handleReset} />
+      </div>
+    );
   }
 
 
@@ -299,7 +338,7 @@ export default function TurnosPage() {
                 <div className="space-y-4">
                     <h3 className="text-lg font-medium">Datos de la Visita</h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
+                       <FormField
                             control={form.control}
                             name="schoolName"
                             render={({ field }) => (
@@ -542,7 +581,5 @@ export default function TurnosPage() {
     </div>
   );
 }
-
-    
 
     
