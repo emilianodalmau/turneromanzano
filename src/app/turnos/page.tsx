@@ -248,7 +248,15 @@ export default function TurnosPage() {
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
           <CardTitle className="text-3xl">Programa de Turismo Educativo 2026</CardTitle>
-          <CardDescription>Completa tus datos y nos pondremos en contacto para coordinar la visita.</CardDescription>
+          <CardDescription>
+            <p className="font-bold">Leer atentamente:</p>
+            <ul className="list-disc list-inside text-muted-foreground mt-2">
+                <li>El Programa de Turismo Educativo 2026 es a partir de los 8 años.</li>
+                <li>La visita es guiada por el Parque Temático Sanmartiniano.</li>
+                <li>El máximo de alumnos es de 50 en total por turno.</li>
+                <li>Con la posibilidad de llevar hasta 6 acompañantes.</li>
+            </ul>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
