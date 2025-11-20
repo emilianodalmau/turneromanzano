@@ -40,7 +40,7 @@ const formSchema = z.object({
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   schoolDepartment: z.string().min(1, 'Debe seleccionar un departamento.'),
   schoolEmail: z.string().min(1, { message: "El email de la institución es requerido." }).email('El email de la institución no es válido.'),
-  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'El máximo es 50 alumnos.'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'Para mas de 50 alumnos tiene que sacar otro turno'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
   }),

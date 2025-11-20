@@ -47,7 +47,7 @@ const editFormSchema = z.object({
   responsibleName: z.string().min(1, 'El nombre es requerido.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   schoolEmail: z.string().email('El email de la institución no es válido.'),
-  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(70, 'El máximo es 70 alumnos.'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(70, 'Para mas de 50 alumnos tiene que sacar otro turno'),
   date: z.date({ required_error: 'Se requiere una fecha para la visita.' }),
   timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
   status: z.enum(['pending', 'confirmed', 'cancelled']),
