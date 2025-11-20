@@ -20,7 +20,7 @@ import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, u
 import { collection, doc } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, PartyPopper } from 'lucide-react';
+import { CalendarIcon, PartyPopper, Copy } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -29,6 +29,7 @@ import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 
 // Schema de validación con el campo de fecha y hora
 const formSchema = z.object({
@@ -59,7 +60,7 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
                 <CardTitle className="text-2xl md:text-3xl">Aceptación de condiciones y términos que emanan del Programa de Turismo Educativo</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="space-y-4 text-muted-foreground prose-sm prose-p:my-2 prose-headings:my-4 max-h-[60vh] overflow-y-auto pr-4">
+                 <div className="space-y-4 text-muted-foreground prose-sm prose-p:my-2 prose-headings:my-4 max-h-[60vh] overflow-y-auto pr-4">
                     <h3 className="text-lg font-semibold text-foreground">Programa de Turismo Educativo 2026: “Un viaje a la naturaleza y la historia de Los Chacayes”</h3>
                     <p>Estimada/o docente,</p>
                     <p>Desde la Dirección de Turismo de Tunuyán, nos complace presentarles nuestro Programa de Turismo Educativo: "Un viaje a la naturaleza y la historia de Los Chacayes". Una experiencia diseñada para enriquecer el aprendizaje de sus estudiantes y conectar con el valioso patrimonio de nuestra región.</p>
@@ -125,6 +126,25 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
 }
 
 function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: () => void }) {
+    const { toast } = useToast();
+    const cbu = '19103215-55032100256696';
+
+    const handleCopyCbu = () => {
+        navigator.clipboard.writeText(cbu).then(() => {
+            toast({
+                title: 'CBU copiado',
+                description: 'El CBU ha sido copiado a tu portapapeles.',
+            });
+        }).catch(err => {
+            console.error('Failed to copy CBU: ', err);
+            toast({
+                variant: 'destructive',
+                title: 'Error al copiar',
+                description: 'No se pudo copiar el CBU.',
+            });
+        });
+    };
+    
     return (
         <Card className="max-w-2xl mx-auto text-center">
             <CardHeader>
@@ -133,13 +153,36 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
                 </div>
                 <CardTitle className="text-2xl md:text-3xl mt-4">¡Solicitud Enviada con Éxito!</CardTitle>
                 <CardDescription>
-                    Hemos recibido tu solicitud de turno. Nos pondremos en contacto a la brevedad para confirmar todos los detalles.
+                    Hemos recibido tu solicitud de turno. Para confirmar la reserva, por favor, realiza el pago.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
-                <p className="text-lg">Tu número de referencia de turno es:</p>
-                <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{referenceId}</p>
-                <p className="text-sm text-muted-foreground mt-4">Por favor, guarda este número para futuras consultas.</p>
+            <CardContent className="space-y-6">
+                 <div>
+                    <p className="text-lg">Tu número de referencia de turno es:</p>
+                    <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{referenceId}</p>
+                    <p className="text-sm text-muted-foreground mt-4">Por favor, guarda este número para futuras consultas.</p>
+                </div>
+                
+                <Separator />
+
+                <div className="text-left space-y-4">
+                    <h4 className="font-semibold text-lg text-center">Datos para el Pago</h4>
+                    <p className="text-muted-foreground">
+                        Para confirmar tu reserva, realiza la transferencia o depósito al siguiente CBU. Una vez realizado el pago, envia el comprobante junto con tu número de referencia a <span className="font-semibold text-primary">desarrolloturísticotunuyan@gmail.com</span>.
+                    </p>
+                    <div>
+                        <p className="text-sm font-medium">CBU:</p>
+                        <div className="flex items-center gap-4 p-3 bg-muted rounded-md">
+                            <p className="text-lg font-mono break-all flex-1">{cbu}</p>
+                            <Button variant="outline" size="icon" onClick={handleCopyCbu}>
+                                <Copy className="h-4 w-4" />
+                                <span className="sr-only">Copiar CBU</span>
+                            </Button>
+                        </div>
+                    </div>
+                     <p className="text-sm text-muted-foreground">Alias: <span className="font-semibold text-foreground">Municipalidad.Tunuyan.Tur</span></p>
+                </div>
+
             </CardContent>
             <CardFooter className="flex justify-center">
                 <Button onClick={onReset}>Solicitar Otro Turno</Button>
@@ -581,3 +624,5 @@ export default function TurnosPage() {
     </div>
   );
 }
+
+    
