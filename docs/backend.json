@@ -83,6 +83,10 @@
             "type": "string",
             "description": "Name of the school or institution visiting."
         },
+        "schoolDepartment": {
+            "type": "string",
+            "description": "Department in Mendoza of the school."
+        },
         "schoolEmail": {
           "type": "string",
           "description": "Email of the school or institution visiting.",
@@ -115,6 +119,7 @@
         "endTime",
         "responsibleName",
         "schoolName",
+        "schoolDepartment",
         "schoolEmail",
         "visitorCount",
         "status",

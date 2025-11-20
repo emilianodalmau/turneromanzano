@@ -156,6 +156,7 @@ export interface MutableAppointment {
   endTime: string;
   responsibleName: string;
   schoolName: string;
+  schoolDepartment: string;
   schoolEmail?: string;
   visitorCount: number;
   status: 'pending' | 'confirmed' | 'cancelled';
@@ -224,3 +225,25 @@ export interface QueueTicket {
   deskId?: string;
   originalAppointmentId?: string;
 }
+
+// --- LISTA DE DEPARTAMENTOS DE MENDOZA ---
+export const mendozaDepartments = [
+    "Capital",
+    "General Alvear",
+    "Godoy Cruz",
+    "Guaymallén",
+    "Junín",
+    "La Paz",
+    "Las Heras",
+    "Lavalle",
+    "Luján de Cuyo",
+    "Maipú",
+    "Malargüe",
+    "Rivadavia",
+    "San Carlos",
+    "San Martín",
+    "San Rafael",
+    "Santa Rosa",
+    "Tunuyán",
+    "Tupungato"
+];

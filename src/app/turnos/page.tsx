@@ -17,8 +17,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import { Appointment, ScheduleConfiguration, DayKey, TimeSlot } from '@/lib/types';
+import { collection, doc } from 'firebase/firestore';
+import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -38,8 +38,9 @@ const formSchema = z.object({
   phone: z.string().min(1, 'El teléfono es requerido.'),
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
+  schoolDepartment: z.string().min(1, 'Debe seleccionar un departamento.'),
   schoolEmail: z.string().min(1, { message: "El email de la institución es requerido." }).email('El email de la institución no es válido.'),
-  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(70, 'El máximo es 70 visitantes.'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 visitante.').max(50, 'El máximo es 50 visitantes.'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
   }),
@@ -125,6 +126,7 @@ export default function TurnosPage() {
       phone: '',
       dni: '',
       schoolName: '',
+      schoolDepartment: '',
       schoolEmail: '',
       visitorCount: 1,
       timeSlot: '',
@@ -193,6 +195,7 @@ export default function TurnosPage() {
             endTime: selectedSlot.endTime,
             responsibleName: `${data.name} ${data.lastName}`,
             schoolName: data.schoolName,
+            schoolDepartment: data.schoolDepartment,
             schoolEmail: data.schoolEmail,
             visitorCount: data.visitorCount,
             status: 'pending' as 'pending',
@@ -269,38 +272,12 @@ export default function TurnosPage() {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
                             control={form.control}
-                            name="schoolName"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Nombre de la escuela o institución</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ej: Escuela N°1" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="schoolEmail"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Email de la institución</FormLabel>
-                                <FormControl>
-                                    <Input type="email" placeholder="contacto@escuela.com" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
                             name="visitorCount"
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Cantidad de visitantes</FormLabel>
                                 <FormControl>
-                                    <Input type="number" min="1" max="70" placeholder="Ej: 25" {...field} />
+                                    <Input type="number" min="1" max="50" placeholder="Ej: 25" {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 </FormItem>
@@ -342,7 +319,6 @@ export default function TurnosPage() {
                                             today.setHours(0, 0, 0, 0);
                                             if (date < today) return true;
 
-                                            // Check if the date is in the blocked dates list
                                             const dateString = format(date, 'yyyy-MM-dd');
                                             if (scheduleConfig?.blockedDates?.includes(dateString)) {
                                                 return true;
@@ -362,7 +338,7 @@ export default function TurnosPage() {
                                 <FormMessage />
                                 </FormItem>
                             )}
-                            />
+                        />
                         <FormField
                             control={form.control}
                             name="timeSlot"
@@ -385,6 +361,56 @@ export default function TurnosPage() {
                                 </Select>
                                 {!selectedDate && <p className="text-sm text-muted-foreground">Selecciona una fecha para ver los horarios.</p>}
                                 {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground">No hay horarios disponibles para esta fecha.</p>}
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="schoolName"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Nombre de la escuela o institución</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ej: Escuela N°1" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="schoolDepartment"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Departamento de la institución</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona un departamento" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {mendozaDepartments.map(dep => (
+                                                <SelectItem key={dep} value={dep}>
+                                                    {dep}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="schoolEmail"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Email de la institución</FormLabel>
+                                <FormControl>
+                                    <Input type="email" placeholder="contacto@escuela.com" {...field} />
+                                </FormControl>
                                 <FormMessage />
                                 </FormItem>
                             )}
@@ -474,5 +500,3 @@ export default function TurnosPage() {
     </div>
   );
 }
-
-    
