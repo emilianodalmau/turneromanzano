@@ -158,6 +158,7 @@ export interface MutableAppointment {
   schoolName: string;
   schoolDepartment: string;
   schoolEmail?: string;
+  higherAuthorityName?: string;
   visitorCount: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   paid?: boolean;
@@ -247,3 +248,5 @@ export const mendozaDepartments = [
     "Tunuyán",
     "Tupungato"
 ];
+
+    

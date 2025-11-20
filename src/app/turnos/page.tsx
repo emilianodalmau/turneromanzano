@@ -40,6 +40,7 @@ const formSchema = z.object({
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
   schoolDepartment: z.string().min(1, 'Debe seleccionar un departamento.'),
   schoolEmail: z.string().min(1, { message: "El email de la institución es requerido." }).email('El email de la institución no es válido.'),
+  higherAuthorityName: z.string().optional(),
   visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'Para mas de 50 alumnos tiene que sacar otro turno'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
@@ -154,6 +155,7 @@ export default function TurnosPage() {
       schoolName: '',
       schoolDepartment: '',
       schoolEmail: '',
+      higherAuthorityName: '',
       visitorCount: 1,
       timeSlot: '',
     },
@@ -223,6 +225,7 @@ export default function TurnosPage() {
             schoolName: data.schoolName,
             schoolDepartment: data.schoolDepartment,
             schoolEmail: data.schoolEmail,
+            higherAuthorityName: data.higherAuthorityName || '',
             visitorCount: data.visitorCount,
             status: 'pending' as 'pending',
             paid: false,
@@ -441,6 +444,19 @@ export default function TurnosPage() {
                                 </FormItem>
                             )}
                         />
+                         <FormField
+                            control={form.control}
+                            name="higherAuthorityName"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Nombre de Autoridad Superior</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ej: Directora Ana María" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                     </div>
                 </div>
 
@@ -526,3 +542,5 @@ export default function TurnosPage() {
     </div>
   );
 }
+
+    
