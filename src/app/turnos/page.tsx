@@ -58,22 +58,48 @@ function TermsAndConditionsStep({ onAccepted }: { onAccepted: () => void }) {
                 <CardTitle className="text-2xl md:text-3xl">Aceptación de condiciones y términos que emanan del Programa de Turismo Educativo</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-                <p className="text-muted-foreground">
-                    El Programa de Turismo Educativo en Argentina tiene como objetivo que los estudiantes de todas las escuelas, especialmente aquellos de sectores vulnerables, conozcan y comprendan la diversidad geográfica y cultural del país. Este programa incluye actividades sociorecreativas y formativas, y se implementa con el apoyo de los Ministerios de Educación y Turismo de la Nación.
-                </p>
-                <div className="space-y-2 text-muted-foreground">
-                    <p>Las condiciones y términos del programa incluyen:</p>
-                    <ul className="list-disc pl-5 space-y-1">
-                        <li><span className="font-semibold">Certificación de Agencias:</span> Las agencias de viajes deben contar con un "Certificado Nacional de Autorización para Agencias de Turismo Estudiantil".</li>
-                        <li><span className="font-semibold">Requisitos para Organizadores:</span> Las agencias deben cumplir con ciertos requisitos de seguridad y calidad en los viajes educativos.</li>
-                        <li><span className="font-semibold">Protección al Estudiante:</span> Se establecen medidas para garantizar la seguridad y el bienestar de los estudiantes durante sus viajes.</li>
-                        <li><span className="font-semibold">Promoción del Turismo Interno:</span> El programa fomenta el conocimiento y aprecio por los destinos turísticos de Argentina.</li>
-                    </ul>
+                <div className="space-y-4 text-muted-foreground">
+                    <h3 className="text-lg font-semibold text-foreground">Programa de Turismo Educativo 2026: “Un viaje a la naturaleza y la historia de Los Chacayes”</h3>
+                    <p>Estimada/o docente,</p>
+                    <p>Desde la Dirección de Turismo de Tunuyán, nos complace presentarles nuestro Programa de Turismo Educativo: "Un viaje a la naturaleza y la historia de Los Chacayes". Una experiencia diseñada para enriquecer el aprendizaje de sus estudiantes y conectar con el valioso patrimonio de nuestra región.</p>
+                    <p>Esta aventura tiene una duración de una hora y treinta minutos aproximadamente. Se inicia con el encuentro con uno de nuestros guías en el ingreso al Museo Retorno a la Patria, continuando luego al Museo Arqueológico y de Ciencias Naturales (o viceversa). La experiencia prosigue con una visita al Monumento Retorno a la Patria, donde se realizará una foto grupal, y culmina en el icónico Árbol Histórico Manzano de Tunuyán.</p>
+                    <p>El programa incluye, además, el acceso gratuito y por el día (sin pernocte) al Camping Municipal para diversas actividades recreativas, siempre solicitando el cuidado de las instalaciones y el mantenimiento del orden y la limpieza.</p>
+                    <div>
+                        <h4 className="font-semibold text-foreground">Costo del Programa:</h4>
+                        <p>El Programa tiene un valor de 60 U.T.M. por persona. Esto equivale a un total de $6000 ($100 por U.T.M.).</p>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-foreground">Cómo concretar su visita:</h4>
+                        <p>Para asegurar una organización eficiente y una experiencia inolvidable, les pedimos seguir estos sencillos pasos:</p>
+                        <ul className="list-decimal pl-5 mt-2 space-y-1">
+                            <li>Consultar y elegir la fecha y hora en el siguiente paso.</li>
+                            <li>Completar el formulario de reserva.</li>
+                            <li>Realizar el pago: Tras la recepción y aceptación de su formulario, le indicaremos cómo proceder con el abono del programa.</li>
+                            <li>Coordinar el transporte: Contrate el servicio de transporte que los conducirá hasta el Paraje Manzano Histórico.</li>
+                        </ul>
+                         <p className="mt-2">El día de la visita, nuestro equipo de guías los estará esperando en la puerta de los museos para iniciar esta fascinante experiencia.</p>
+                    </div>
+                     <div>
+                        <h4 className="font-semibold text-foreground">Solicitud de Descuentos:</h4>
+                        <p>Entendemos que, en ocasiones, algunos estudiantes podrían tener dificultades para afrontar el costo del programa. Si este fuera el caso, les sugerimos redactar una nota en formato PDF, con membrete de la escuela dirigida al Sr. Intendente Municipal, Profesor José Emir Andraos, solicitando la exención del pago de aquellos alumnos que no puedan solventar el programa. Por favor, envíe esta nota al correo desarrolloturísticotunuyan@gmail.com.</p>
+                    </div>
+                     <div>
+                        <h4 className="font-semibold text-foreground">Recomendaciones importantes para la visita a los museos:</h4>
+                        <p>Para garantizar una experiencia óptima y fluida dentro de los museos, y para la conservación de nuestro patrimonio, les solicitamos amablemente tener en cuenta lo siguiente:</p>
+                        <ul className="list-none mt-2 space-y-1">
+                            <li>🚫 No fumar.</li>
+                            <li>🚫 No ingresar ni consumir dentro de los edificios ningún tipo de alimentos o bebidas (agua, mate, gaseosas, golosinas, sándwiches, etc.).</li>
+                            <li>🚫 No ingresar con pelotas, palos u otro objeto que pueda dañar las exhibiciones.</li>
+                            <li>🚫 No ingresar con animales, salvo los de compañía para personas con discapacidad.</li>
+                            <li>🎒 Los bolsos o mochilas deben llevarse en la mano o por delante.</li>
+                            <li>📸 Se permite tomar fotografías, pero sin el uso del flash.</li>
+                            <li>👥 Para una mejor organización y disfrute, solicitamos que los grupos se organicen en subgrupos de no más de 20 (veinte) personas.</li>
+                        </ul>
+                    </div>
+                    <p>Cualquier inquietud adicional, no dude en comunicarse con nosotros al 2622-413102 desde las 09:00 a las 13:30 horas.</p>
+                    <p>Agradecemos nuevamente por elegir nuestro programa educativo y estamos seguros de que disfrutarán de esta enriquecedora experiencia en la historia y la naturaleza de Los Chacayes.</p>
+                    <p className="font-semibold">Saludos cordiales,<br />Dirección de Turismo de Tunuyán</p>
                 </div>
-                <p className="text-muted-foreground">
-                    Este programa busca no solo ofrecer experiencias educativas, sino también promover la inclusión y el respeto por la diversidad cultural.
-                </p>
-
                 <div className="flex items-center space-x-2 pt-4">
                     <Checkbox id="terms" checked={accepted} onCheckedChange={(checked) => setAccepted(checked as boolean)} />
                     <label
