@@ -187,7 +187,7 @@ export default function TurnosPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-3xl">Solicitud de Turno para Visitas</CardTitle>
+          <CardTitle className="text-3xl">Programa de Turismo Educativo 2026</CardTitle>
           <CardDescription>Completa tus datos y nos pondremos en contacto para coordinar la visita.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -406,4 +406,5 @@ export default function TurnosPage() {
   );
 }
 
+    
     
