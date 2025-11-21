@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { User } from '@/lib/types';
 import { collection, query, where, doc } from 'firebase/firestore';
 import {
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 function UserList({ users, currentUser }: { users: User[], currentUser: User | null }) {
@@ -42,6 +43,16 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
             default: return 'secondary';
         }
     }
+
+    const handleRoleChange = (userId: string, newRole: string) => {
+        if (!firestore) return;
+        const userDocRef = doc(firestore, 'users', userId);
+        setDocumentNonBlocking(userDocRef, { role: newRole }, { merge: true });
+        toast({
+            title: "Rol Actualizado",
+            description: `El rol del usuario ha sido cambiado a ${newRole.replace('_', ' ')}.`,
+        });
+    };
     
     const handleDelete = (userId: string, userName: string) => {
         if (!firestore) return;
@@ -86,9 +97,24 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                                 <TableCell>{user.dni || '-'}</TableCell>
                                 <TableCell>{user.phone || '-'}</TableCell>
                                 <TableCell>
-                                    <Badge variant={getRoleVariant(user.role)}>
-                                        {user.role ? user.role.replace('_', ' ') : 'Sin rol'}
-                                    </Badge>
+                                    {currentUser?.role === 'super_admin' && user.role !== 'super_admin' ? (
+                                        <Select
+                                            value={user.role}
+                                            onValueChange={(newRole) => handleRoleChange(user.id, newRole)}
+                                        >
+                                            <SelectTrigger className="w-[180px]">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="manzano_admin">Admin Museo</SelectItem>
+                                                <SelectItem value="license_admin">Admin Licencias</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Badge variant={getRoleVariant(user.role)}>
+                                            {user.role ? user.role.replace('_', ' ') : 'Sin rol'}
+                                        </Badge>
+                                    )}
                                 </TableCell>
                                  {currentUser?.role === 'super_admin' && (
                                      <TableCell className="text-right">
