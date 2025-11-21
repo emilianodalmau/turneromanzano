@@ -253,7 +253,7 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
 // --- INITIAL STEP ---
 function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'check_status') => void }) {
     return (
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto mt-16">
             <CardHeader>
                 <CardTitle className="text-2xl md:text-3xl text-center">Gestión de Turnos para Licencia de Conducir</CardTitle>
                 <CardDescription className="text-center pt-2">
@@ -894,5 +894,7 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
+
+    
 
     
