@@ -20,7 +20,7 @@ import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, u
 import { collection, doc } from 'firebase/firestore';
 import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen } from 'lucide-react';
+import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen, PartyPopper } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -36,33 +36,8 @@ import { uploadFile } from '@/firebase/client-storage';
 const fileSchema = z.instanceof(File, { message: 'Se requiere el archivo.' }).optional();
 
 // Construye un esquema de Zod dinámicamente para los documentos
-const documentsSchema = z.object(
-  procedureTypes.reduce((acc, procedure) => {
-    procedure.docs.forEach(docOrCategory => {
-      if ('category' in docOrCategory) {
-        docOrCategory.docs.forEach(doc => {
-          if (!doc.isLink) {
-             // Solo añade al esquema si no es opcional
-            if (!doc.optional) {
-              acc[doc.id] = z.instanceof(File, { message: `Se requiere ${doc.label}.` });
-            } else {
-              acc[doc.id] = fileSchema;
-            }
-          }
-        });
-      } else {
-        if (!docOrCategory.isLink) {
-           if (!docOrCategory.optional) {
-            acc[docOrCategory.id] = z.instanceof(File, { message: `Se requiere ${docOrCategory.label}.` });
-          } else {
-            acc[docOrCategory.id] = fileSchema;
-          }
-        }
-      }
-    });
-    return acc;
-  }, {} as Record<string, z.ZodTypeAny>)
-).optional();
+// Esto es solo una base, la validación real se hará dinámicamente.
+const documentsSchema = z.record(z.string(), fileSchema);
 
 
 const formSchema = z.object({
@@ -215,6 +190,29 @@ function DocumentsFormSection({ control }: { control: any }) {
     );
 }
 
+// --- SUCCESS STEP ---
+function SuccessStep({ onReset }: { onReset: () => void }) {
+    return (
+        <Card className="max-w-2xl mx-auto text-center">
+            <CardHeader>
+                <div className="mx-auto bg-green-100 rounded-full h-16 w-16 flex items-center justify-center">
+                    <PartyPopper className="h-10 w-10 text-green-600" />
+                </div>
+                <CardTitle className="text-2xl md:text-3xl mt-4">¡Solicitud de Turno Enviada!</CardTitle>
+                <CardDescription>
+                    Hemos recibido tu solicitud. Pronto será revisada por nuestro equipo.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p>Recibirás un correo electrónico de confirmación una vez que tu turno sea aprobado. Asegúrate de llevar toda la documentación original el día de tu cita.</p>
+            </CardContent>
+            <CardContent>
+                <Button onClick={onReset}>Solicitar Otro Turno</Button>
+            </CardContent>
+        </Card>
+    );
+}
+
 // --- MAIN PAGE COMPONENT ---
 export default function TurnosLicenciasPage() {
   const { toast } = useToast();
@@ -346,13 +344,8 @@ export default function TurnosLicenciasPage() {
         if (appointmentDocRef) {
           setDocumentNonBlocking(userRef, userProfile, { merge: true });
         }
-
-        toast({
-            title: 'Solicitud de Turno Enviada',
-            description: 'Hemos recibido tu solicitud. Recuerda cumplir con los requisitos informados.',
-        });
-        form.reset();
-        setCurrentStep(0);
+        
+        setCurrentStep(steps.length); // Go to success step
     } catch (error) {
         console.error('Error al guardar la solicitud de turno:', error);
         toast({
@@ -370,41 +363,65 @@ export default function TurnosLicenciasPage() {
     { name: 'Datos Personales', fields: ['name', 'lastName', 'email', 'phone', 'dni'] as const },
     { name: 'Trámite y Documentos', fields: ['procedureType', 'documents'] as const },
   ];
+  
+  const handleReset = () => {
+    form.reset();
+    setCurrentStep(0);
+  }
 
   const nextStep = async () => {
+    // Validate current step fields before proceeding
     const fieldsToValidate = steps[currentStep].fields;
     const isValid = await form.trigger(fieldsToValidate);
 
+    if (!isValid) return;
+
     // Special validation for documents on step 3
-    if (currentStep === 2 && procedureType) {
-        const selectedProcedure = procedureTypes.find(p => p.id === procedureType);
+    if (currentStep === 2) {
+        const procedureTypeId = form.getValues('procedureType');
+        const selectedProcedure = procedureTypes.find(p => p.id === procedureTypeId);
+
         if (selectedProcedure) {
-            let allDocsValid = true;
-            const checkDocs = (docs: (DocumentRequirement | {category: string, docs: DocumentRequirement[]})[]) => {
-                for (const item of docs) {
+            let allRequiredDocsPresent = true;
+            const requiredDocs: DocumentRequirement[] = [];
+
+            const collectRequiredDocs = (docs: (DocumentRequirement | { category: string; docs: DocumentRequirement[] })[]) => {
+                docs.forEach(item => {
                     if ('category' in item) {
-                        checkDocs(item.docs);
-                    } else if (!item.optional && !item.isLink) {
-                        const docFile = form.getValues(`documents.${item.id}` as any);
-                        if (!docFile) {
-                            form.setError(`documents.${item.id}` as any, { type: 'required', message: `Se requiere ${item.label}.` });
-                            allDocsValid = false;
-                        }
+                        collectRequiredDocs(item.docs);
+                    } else if (!item.isLink && !item.optional) {
+                        requiredDocs.push(item);
                     }
+                });
+            };
+
+            collectRequiredDocs(selectedProcedure.docs);
+            
+            for (const doc of requiredDocs) {
+                const file = form.getValues(`documents.${doc.id}` as any);
+                if (!file) {
+                    form.setError(`documents.${doc.id}` as any, { type: 'manual', message: 'Este documento es obligatorio.' });
+                    allRequiredDocsPresent = false;
                 }
             }
-            checkDocs(selectedProcedure.docs);
-            if (!allDocsValid) return;
+            if (!allRequiredDocsPresent) return;
         }
     }
 
 
-    if (isValid) {
-      setCurrentStep(s => Math.min(s + 1, steps.length - 1));
+    if (currentStep === steps.length - 1) {
+        // Last step, submit the form
+        await form.handleSubmit(onSubmit)();
+    } else {
+        setCurrentStep(s => Math.min(s + 1, steps.length - 1));
     }
   };
 
   const prevStep = () => setCurrentStep(s => Math.max(s - 1, 0));
+  
+  if (currentStep === steps.length) {
+      return <SuccessStep onReset={handleReset} />;
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -415,7 +432,7 @@ export default function TurnosLicenciasPage() {
         </CardHeader>
         <CardContent>
             <div className="space-y-4 mb-8">
-                 <Progress value={(currentStep + 1) / steps.length * 100} className="w-full" />
+                 <Progress value={(currentStep + 1) / (steps.length + 1) * 100} className="w-full" />
                  <p className="text-sm text-center text-muted-foreground">Paso {currentStep + 1} de {steps.length}: {steps[currentStep].name}</p>
             </div>
 
@@ -655,14 +672,10 @@ export default function TurnosLicenciasPage() {
                         </Button>
                     ) : <Link href="/" passHref><Button type="button" variant="outline">Cancelar</Button></Link>}
                     
-                    {currentStep < steps.length - 1 ? (
-                        <Button type="button" onClick={nextStep}>
-                            Siguiente
-                            <ChevronRight className="w-4 h-4 ml-2" />
-                        </Button>
-                    ) : (
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? (
+                    
+                    <Button type="button" onClick={nextStep} disabled={isSubmitting}>
+                        {currentStep === steps.length - 1 ? (
+                            isSubmitting ? (
                                 <>
                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                     Enviando...
@@ -672,9 +685,14 @@ export default function TurnosLicenciasPage() {
                                     <CheckCircle className="w-4 h-4 mr-2" />
                                     Enviar Solicitud
                                 </>
-                            )}
-                        </Button>
-                    )}
+                            )
+                        ) : (
+                            <>
+                                Siguiente
+                                <ChevronRight className="w-4 h-4 ml-2" />
+                            </>
+                        )}
+                    </Button>
                 </div>
             </form>
           </Form>
