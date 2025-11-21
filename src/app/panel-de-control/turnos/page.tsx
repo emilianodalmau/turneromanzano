@@ -42,6 +42,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import Image from 'next/image';
 
 const editFormSchema = z.object({
   responsibleName: z.string().min(1, 'El nombre es requerido.'),
@@ -204,13 +205,15 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                             </FormItem>
                             {appointment.paymentProofUrl && (
                                 <FormItem>
-                                    <FormLabel>Comprobante de Pago</FormLabel>
-                                    <a href={appointment.paymentProofUrl} target="_blank" rel="noopener noreferrer">
-                                        <Button variant="secondary" className="w-full">
-                                            <FileText className="mr-2 h-4 w-4" />
-                                            Ver Comprobante Cargado
-                                        </Button>
-                                    </a>
+                                    <FormLabel>Comprobante de Pago Cargado</FormLabel>
+                                     <div className="relative w-full h-64 mt-2 rounded-md overflow-hidden border">
+                                        <Image
+                                            src={appointment.paymentProofUrl}
+                                            alt="Comprobante de pago"
+                                            layout="fill"
+                                            objectFit="contain"
+                                        />
+                                    </div>
                                 </FormItem>
                             )}
                             <FormField control={form.control} name="schoolName" render={({ field }) => (

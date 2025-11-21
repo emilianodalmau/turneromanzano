@@ -33,6 +33,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.tunuyan.gov.ar',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
