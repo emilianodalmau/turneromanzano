@@ -23,6 +23,9 @@ export default function Home() {
            <Link href="/pantalla" passHref>
             <Button variant="secondary">Pantalla de Turnos</Button>
           </Link>
+          <Link href="/test" passHref>
+            <Button variant="destructive">Test</Button>
+          </Link>
         </div>
       </div>
     </div>
