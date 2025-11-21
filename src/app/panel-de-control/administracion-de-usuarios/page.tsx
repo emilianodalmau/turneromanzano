@@ -1,8 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { User } from '@/lib/types';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -27,15 +28,15 @@ function UserList({ users }: { users: User[] }) {
     }
 
     if (users.length === 0) {
-        return <p>No hay usuarios registrados en el sistema.</p>;
+        return <p>No hay usuarios administradores registrados en el sistema.</p>;
     }
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Usuarios del Sistema</CardTitle>
+                <CardTitle>Usuarios Administradores</CardTitle>
                 <CardDescription>
-                    Lista completa de todos los usuarios registrados en la plataforma.
+                    Lista de usuarios con roles de administrador en la plataforma.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -52,16 +53,14 @@ function UserList({ users }: { users: User[] }) {
                     <TableBody>
                         {users.map((user) => (
                             <TableRow key={user.id}>
-                                <TableCell className="font-medium">{user.name} {user.lastName}</TableCell>
+                                <TableCell className="font-medium">{user.name || '-'} {user.lastName || ''}</TableCell>
                                 <TableCell>{user.email}</TableCell>
-                                <TableCell>{user.dni}</TableCell>
-                                <TableCell>{user.phone}</TableCell>
+                                <TableCell>{user.dni || '-'}</TableCell>
+                                <TableCell>{user.phone || '-'}</TableCell>
                                 <TableCell>
-                                    {user.role ? (
-                                        <Badge variant={getRoleVariant(user.role)}>
-                                            {user.role.replace('_', ' ')}
-                                        </Badge>
-                                    ) : 'No asignado'}
+                                    <Badge variant={getRoleVariant(user.role)}>
+                                        {user.role!.replace('_', ' ')}
+                                    </Badge>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -77,7 +76,7 @@ export default function AdministracionUsuariosPage() {
     const firestore = useFirestore();
 
     const usersQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'users') : null),
+        () => (firestore ? query(collection(firestore, 'users'), where('role', 'in', ['manzano_admin', 'license_admin', 'super_admin'])) : null),
         [firestore]
     );
 
