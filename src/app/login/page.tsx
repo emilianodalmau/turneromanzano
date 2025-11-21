@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
+import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp, setDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
-  const firestore = getFirestore();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
@@ -41,7 +41,7 @@ export default function LoginPage() {
   };
   
   const handleSignUp = async () => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     if (!email || !password) {
       toast({
         variant: "destructive",
@@ -52,11 +52,22 @@ export default function LoginPage() {
     }
 
     try {
-      // The `initiateEmailSignUp` function handles the creation of the user in Firebase Auth.
-      // We don't need to create a Firestore document here.
-      // The user profile document will be created/updated when the user visits their profile page.
-      await initiateEmailSignUp(auth, email, password);
-      // The onAuthStateChanged listener in the provider will handle the redirect after sign-up and sign-in.
+      const userCredential = await initiateEmailSignUp(auth, email, password);
+      const user = userCredential.user;
+      
+      // Create user profile document right after sign up to ensure role is set
+      const userDocRef = doc(firestore, 'users', user.uid);
+      const profileData = {
+          id: user.uid,
+          email: user.email,
+          role: 'license_admin', // Default role
+          name: '',
+          lastName: '',
+          dni: '',
+          phone: '',
+      }
+      setDocumentNonBlocking(userDocRef, profileData, { merge: true });
+
       toast({
         title: "Registro exitoso",
         description: "Serás redirigido a tu panel de control.",
