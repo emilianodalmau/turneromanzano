@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp, setDocumentNonBlocking, useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { UserCredential } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 
