@@ -15,7 +15,8 @@ service cloud.firestore {
       allow create: if true;
       allow list: if true; // Allow public listing for availability checks
       allow read: if request.auth != null; // Only authenticated users can read full details
-      allow update, delete: if request.auth != null; // To be refined with roles
+      allow update: if true; // Allow updates for unauthenticated users to upload payment proofs
+      allow delete: if request.auth != null; // To be refined with roles
     }
 
     match /scheduleConfigurations/{scheduleId} {
