@@ -31,8 +31,7 @@ service cloud.firestore {
 
     match /guests/{guestId} {
       allow create: if true;
-      allow read: if request.auth != null && (isManzanoAdmin() || isLicenseAdmin());
-      allow update: if request.auth != null && (isManzanoAdmin() || isLicenseAdmin());
+      allow read, update: if request.auth != null && (isManzanoAdmin() || isLicenseAdmin());
     }
 
     match /appointments/{appointmentId} {

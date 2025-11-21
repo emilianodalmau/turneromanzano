@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 
-function UserList({ users }: { users: User[] }) {
+function UserList({ users, currentUser }: { users: User[], currentUser: User | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     
@@ -75,7 +75,7 @@ function UserList({ users }: { users: User[] }) {
                             <TableHead>DNI</TableHead>
                             <TableHead>Teléfono</TableHead>
                             <TableHead>Rol</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
+                            {currentUser?.role === 'super_admin' && <TableHead className="text-right">Acciones</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -90,34 +90,36 @@ function UserList({ users }: { users: User[] }) {
                                         {user.role ? user.role.replace('_', ' ') : 'Sin rol'}
                                     </Badge>
                                 </TableCell>
-                                 <TableCell className="text-right">
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" disabled={user.role === 'super_admin'}>
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Se eliminará el perfil del usuario,
-                                                    pero no su cuenta de autenticación. El usuario podrá volver a iniciar sesión
-                                                    pero no tendrá permisos.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction
-                                                    onClick={() => handleDelete(user.id, user.name)}
-                                                    className="bg-destructive hover:bg-destructive/90"
-                                                >
-                                                    Eliminar
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </TableCell>
+                                 {currentUser?.role === 'super_admin' && (
+                                     <TableCell className="text-right">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" disabled={user.role === 'super_admin'}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Esta acción no se puede deshacer. Se eliminará el perfil del usuario,
+                                                        pero no su cuenta de autenticación. El usuario podrá volver a iniciar sesión
+                                                        pero no tendrá permisos.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => handleDelete(user.id, user.name)}
+                                                        className="bg-destructive hover:bg-destructive/90"
+                                                    >
+                                                        Eliminar
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                 )}
                             </TableRow>
                         ))}
                     </TableBody>
@@ -132,7 +134,7 @@ export default function AdministracionUsuariosPage() {
     const firestore = useFirestore();
 
     const usersQuery = useMemoFirebase(
-        () => (firestore ? query(collection(firestore, 'users'), where('role', '!=', null)) : null),
+        () => (firestore ? query(collection(firestore, 'users'), where('role', 'in', ['manzano_admin', 'license_admin', 'super_admin'])) : null),
         [firestore]
     );
 
@@ -157,5 +159,5 @@ export default function AdministracionUsuariosPage() {
     }
 
 
-    return <UserList users={users || []} />;
+    return <UserList users={users || []} currentUser={profile} />;
 }
