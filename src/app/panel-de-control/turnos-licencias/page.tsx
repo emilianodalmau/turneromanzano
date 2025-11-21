@@ -41,6 +41,7 @@ import { CalendarIcon, Search, X as XIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { Label } from '@/components/ui/label';
 
 const editFormSchema = z.object({
   name: z.string().min(1, "El nombre es requerido."),
@@ -202,7 +203,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
                                     <div className="grid grid-cols-2 gap-4">
                                         {documentEntries.map(([key, url]) => (
                                             <div key={key} className="space-y-2">
-                                                <Label className="text-sm">{key.replace(/_/g, ' ')}</Label>
+                                                <Label className="text-sm capitalize">{key.replace(/_/g, ' ')}</Label>
                                                 <a href={url} target="_blank" rel="noopener noreferrer">
                                                     <div className="relative w-full h-24 mt-2 rounded-md overflow-hidden border">
                                                         <Image
