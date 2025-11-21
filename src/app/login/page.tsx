@@ -28,6 +28,7 @@ export default function LoginPage() {
   }, [user, isUserLoading, router]);
 
   const handleSignIn = () => {
+    if (!auth) return;
     if (!email || !password) {
       toast({
         variant: "destructive",
@@ -40,6 +41,7 @@ export default function LoginPage() {
   };
   
   const handleSignUp = async () => {
+    if (!auth) return;
     if (!email || !password) {
       toast({
         variant: "destructive",

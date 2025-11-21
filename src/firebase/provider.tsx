@@ -12,7 +12,6 @@ import { User as AppUser } from '@/lib/types';
 
 // Combined state for the Firebase context
 export interface FirebaseContextState {
-  areServicesAvailable: boolean;
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
@@ -91,9 +90,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   useEffect(() => {
-    // Add a guard to ensure both user and firestore are available
     if (!user || !firestore) {
-      // If there's no user, we are done loading.
       if (!user) {
         setIsLoading(false);
       }
@@ -108,7 +105,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         if (docSnap.exists()) {
           setProfile(docSnap.data() as AppUser);
         } else {
-          // Handle case where user is authenticated but has no profile doc yet
           setProfile(null); 
         }
         setIsLoading(false);
@@ -123,20 +119,16 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribeProfile();
   }, [user, firestore]);
 
-  const contextValue = useMemo((): FirebaseContextState => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth && storage);
-    return {
-      areServicesAvailable: servicesAvailable,
-      firebaseApp: servicesAvailable ? firebaseApp : null,
-      firestore: servicesAvailable ? firestore : null,
-      auth: servicesAvailable ? auth : null,
-      storage: servicesAvailable ? storage : null,
+  const contextValue = useMemo((): FirebaseContextState => ({
+      firebaseApp,
+      firestore,
+      auth,
+      storage,
       user,
       profile,
       isUserLoading: isLoading,
       userError: error,
-    };
-  }, [firebaseApp, firestore, auth, storage, user, profile, isLoading, error]);
+    }), [firebaseApp, firestore, auth, storage, user, profile, isLoading, error]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
