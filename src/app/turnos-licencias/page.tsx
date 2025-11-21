@@ -324,7 +324,7 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
     };
 
     return (
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto mt-16">
             <CardHeader>
                 <CardTitle className="text-2xl md:text-3xl">Consultar Estado del Turno</CardTitle>
                 <CardDescription>
@@ -894,7 +894,3 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
-
-    
-
-    
