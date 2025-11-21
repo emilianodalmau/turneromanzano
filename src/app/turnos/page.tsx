@@ -74,14 +74,14 @@ function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'upl
                     ¿Qué deseas hacer?
                 </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Button onClick={() => onSelectOption('new')} variant="default" className="h-24 text-lg">
+            <CardContent className="grid grid-cols-1 gap-4">
+                <Button onClick={() => onSelectOption('new')} variant="default" className="h-16 text-lg">
                     Solicitar un Nuevo Turno
                 </Button>
-                <Button onClick={() => onSelectOption('upload')} variant="outline" className="h-24 text-lg">
+                <Button onClick={() => onSelectOption('upload')} variant="outline" className="h-16 text-lg">
                     Subir Comprobante de Pago
                 </Button>
-                 <Button onClick={() => onSelectOption('check_status')} variant="secondary" className="h-24 text-lg">
+                 <Button onClick={() => onSelectOption('check_status')} variant="secondary" className="h-16 text-lg">
                     Consultar Turno
                 </Button>
             </CardContent>
@@ -949,4 +949,3 @@ export default function TurnosPage() {
     </div>
   );
 }
-
