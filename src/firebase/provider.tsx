@@ -23,9 +23,9 @@ export interface FirebaseContextState {
 
 // Return type for useFirebase()
 export interface FirebaseServicesAndUser {
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
   user: FirebaseAuthUser | null;
   profile: AppUser | null;
   isUserLoading: boolean;
@@ -86,7 +86,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [auth]);
 
   useEffect(() => {
+    // Add a guard to ensure both user and firestore are available
     if (!user || !firestore) {
+      // If there's no user, we are done loading.
+      if (!user) {
+        setIsLoading(false);
+      }
       return;
     }
 
@@ -140,9 +145,10 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   if (context === undefined) {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
-  }
+
+  // This is the fix. We no longer throw an error if services are not ready.
+  // We simply return the current context, which might have null services initially.
+  // Downstream hooks like useAuth/useFirestore will handle the null case.
   return {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,
@@ -154,9 +160,29 @@ export const useFirebase = (): FirebaseServicesAndUser => {
   };
 };
 
-export const useAuth = (): Auth => useFirebase().auth;
-export const useFirestore = (): Firestore => useFirebase().firestore;
-export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
+export const useAuth = (): Auth => {
+    const { auth } = useFirebase();
+    if (!auth) {
+        throw new Error('Firebase Auth is not available. Please check your FirebaseProvider setup.');
+    }
+    return auth;
+}
+
+export const useFirestore = (): Firestore => {
+    const { firestore } = useFirebase();
+    if (!firestore) {
+        throw new Error('Firestore is not available. Please check your FirebaseProvider setup.');
+    }
+    return firestore;
+};
+
+export const useFirebaseApp = (): FirebaseApp => {
+    const { firebaseApp } = useFirebase();
+    if (!firebaseApp) {
+        throw new Error('Firebase App is not available. Please check your FirebaseProvider setup.');
+    }
+    return firebaseApp;
+};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (T & {__memo?: boolean}) {
   const memoized = useMemo(factory, deps);
