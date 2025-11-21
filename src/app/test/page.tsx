@@ -1,40 +1,42 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { initializeFirebase } from '@/firebase';
 import { getStorage, ref } from 'firebase/storage';
-
-// Your web app's Firebase configuration provided for testing
-const testFirebaseConfig = {
-  apiKey: "AIzaSyDvrE_erSy65SZaonL4M9QvwpZ3S-eA7e8",
-  authDomain: "studio-7184675653-a4cc6.firebaseapp.com",
-  projectId: "studio-7184675653-a4cc6",
-  storageBucket: "studio-7184675653-a4cc6.appspot.com",
-  messagingSenderId: "496821863464",
-  appId: "1:496821863464:web:038e5c71a4ada14d45e11d"
-};
+import { useMemo } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function TestPage() {
+  // Use useMemo to ensure initialization only runs once per component mount.
+  const firebaseServices = useMemo(() => {
+    try {
+      return initializeFirebase();
+    } catch (error) {
+      console.error("Firebase initialization failed on test page:", error);
+      return null;
+    }
+  }, []);
+
+  const storageBucketUrl = firebaseServices?.firebaseApp?.options?.storageBucket || null;
 
   const handleConnect = () => {
-    try {
-      console.log('Intentando conectar con la configuración:', testFirebaseConfig);
+    if (!firebaseServices) {
+       alert('La inicialización de Firebase falló. Revisa la consola para más detalles.');
+       return;
+    }
 
-      // We need a unique app name to initialize a second app instance for testing
-      const appName = 'test-app-' + Date.now();
-      const testApp: FirebaseApp = initializeApp(testFirebaseConfig, appName);
-      
-      console.log('App de prueba inicializada:', testApp.name);
-      
-      // Get a reference to the storage service
-      const storage = getStorage(testApp);
+    try {
+      console.log('Intentando conectar con la configuración:', firebaseServices.firebaseApp.options);
+
+      // Get a reference to the storage service using the initialized app
+      const storage = getStorage(firebaseServices.firebaseApp);
       console.log('Servicio de Storage obtenido:', storage);
 
       // Create a reference to a test file
       const testFileRef = ref(storage, 'comprobantesPago/test.txt');
       console.log('Referencia de archivo de prueba creada:', testFileRef.fullPath);
       
-      alert('Conexión exitosa. Revisa la consola para más detalles.');
+      alert('Intento de conexión realizado. Revisa la consola para ver si hubo errores de CORS.');
 
     } catch (error: any) {
       console.error('Error durante la conexión de prueba:', error);
@@ -44,12 +46,42 @@ export default function TestPage() {
 
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">Página de Prueba</h1>
-      <p className="mt-2 mb-4">Usa este botón para intentar conectar con Firebase Storage usando la configuración proporcionada y ver los resultados en la consola.</p>
-      <Button onClick={handleConnect}>
-        Conectar a Bucket
-      </Button>
+    <div className="container mx-auto p-8">
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+            <CardTitle>Página de Prueba de Conexión a Storage</CardTitle>
+            <CardDescription>Usa esta página para verificar la conexión con Firebase Storage y solucionar problemas de CORS.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            <div>
+                <h3 className="font-semibold">1. URL del Bucket Detectada</h3>
+                <p className="text-muted-foreground mt-1">La aplicación está configurada para usar el siguiente bucket. Úsalo en el comando `gsutil`.</p>
+                {storageBucketUrl ? (
+                    <code className="block bg-muted text-foreground p-3 rounded-md mt-2 break-all">
+                        gs://{storageBucketUrl}
+                    </code>
+                ) : (
+                     <p className="text-destructive mt-2">No se pudo detectar la URL del bucket. ¿Está la configuración de Firebase correcta?</p>
+                )}
+            </div>
+
+            <div>
+                <h3 className="font-semibold">2. Ejecuta el Comando CORS</h3>
+                <p className="text-muted-foreground mt-1">Copia y pega el siguiente comando en tu terminal para aplicar la configuración de CORS al bucket correcto:</p>
+                <code className="block bg-muted text-foreground p-3 rounded-md mt-2 break-words">
+                    gsutil cors set cors.json gs://{storageBucketUrl || '[URL-DEL-BUCKET]'}
+                </code>
+            </div>
+
+            <div>
+                 <h3 className="font-semibold">3. Verifica la Conexión</h3>
+                 <p className="text-muted-foreground mt-1">Después de ejecutar el comando `gsutil`, haz clic en este botón para intentar conectar. Revisa la consola de tu navegador para ver si aparecen errores de CORS.</p>
+                 <Button onClick={handleConnect} className="mt-4" disabled={!storageBucketUrl}>
+                    Verificar Conexión a Bucket
+                </Button>
+            </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
