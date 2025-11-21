@@ -6,7 +6,11 @@ import { initializeFirebase } from '@/firebase';
 // This function gets the storage instance for the client.
 function getClientStorageInstance() {
     // Client-side: Use the standard client-side initialization.
-    return initializeFirebase().storage;
+    const { storage } = initializeFirebase();
+    if (!storage) {
+        throw new Error("Firebase Storage is not initialized on the client.");
+    }
+    return storage;
 }
 
 /**
@@ -18,9 +22,6 @@ function getClientStorageInstance() {
  */
 export async function uploadFile(file: File, path: string): Promise<string> {
   const storage = getClientStorageInstance();
-  if (!storage) {
-    throw new Error("Firebase Storage is not initialized on the client.");
-  }
   if (!file) {
     throw new Error("File is not provided for upload.");
   }
