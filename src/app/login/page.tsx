@@ -52,25 +52,16 @@ export default function LoginPage() {
     }
 
     try {
-      // We are not using the non-blocking version here because we need the user credential
-      // to create the user profile document.
-      const userCredential: UserCredential = await initiateEmailSignUp(auth, email, password);
-      const user = userCredential.user;
-
-      if (user) {
-        // Create a user profile document in Firestore
-        const userDocRef = doc(firestore, 'users', user.uid);
-        await setDoc(userDocRef, {
-          id: user.uid,
-          email: user.email,
-          role: 'license_admin', // Assign a default role
-          name: '',
-          lastName: '',
-          dni: '',
-          phone: '',
-        });
-        // The onAuthStateChanged listener in the provider will handle the redirect.
-      }
+      // The `initiateEmailSignUp` function handles the creation of the user in Firebase Auth.
+      // We don't need to create a Firestore document here.
+      // The user profile document will be created/updated when the user visits their profile page.
+      await initiateEmailSignUp(auth, email, password);
+      // The onAuthStateChanged listener in the provider will handle the redirect after sign-up and sign-in.
+      toast({
+        title: "Registro exitoso",
+        description: "Serás redirigido a tu panel de control.",
+      });
+      
     } catch (error: any) {
         console.error("Sign up error:", error);
         if (error.code === 'auth/email-already-in-use') {
