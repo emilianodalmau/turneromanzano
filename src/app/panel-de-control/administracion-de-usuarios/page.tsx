@@ -99,11 +99,11 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                                 <TableCell>
                                     {currentUser?.role === 'super_admin' && user.role !== 'super_admin' ? (
                                         <Select
-                                            value={user.role}
+                                            value={user.role || ''}
                                             onValueChange={(newRole) => handleRoleChange(user.id, newRole)}
                                         >
                                             <SelectTrigger className="w-[180px]">
-                                                <SelectValue />
+                                                <SelectValue placeholder="Asignar rol" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="manzano_admin">Admin Museo</SelectItem>
@@ -112,15 +112,15 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                                         </Select>
                                     ) : (
                                         <Badge variant={getRoleVariant(user.role)}>
-                                            {user.role ? user.role.replace('_', ' ') : 'Sin rol'}
+                                            {user.role ? user.role.replace(/_/g, ' ') : 'Sin rol'}
                                         </Badge>
                                     )}
                                 </TableCell>
                                  <TableCell className="text-right">
-                                    {currentUser?.role === 'super_admin' && (
+                                    {currentUser?.role === 'super_admin' && user.role !== 'super_admin' ? (
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" disabled={user.role === 'super_admin'}>
+                                                <Button variant="ghost" size="icon">
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
                                             </AlertDialogTrigger>
@@ -136,7 +136,7 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                                     <AlertDialogAction
-                                                        onClick={() => handleDelete(user.id, user.name)}
+                                                        onClick={() => handleDelete(user.id, user.name || user.email)}
                                                         className="bg-destructive hover:bg-destructive/90"
                                                     >
                                                         Eliminar
@@ -144,7 +144,7 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
-                                    )}
+                                    ) : null}
                                 </TableCell>
                             </TableRow>
                         ))}
