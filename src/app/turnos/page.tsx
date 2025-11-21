@@ -20,7 +20,7 @@ import { useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNon
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2 } from 'lucide-react';
+import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -33,6 +33,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { uploadFile } from '@/firebase/client-storage';
+import { Badge } from '@/components/ui/badge';
 
 
 // --- ZOD SCHEMAS ---
@@ -64,21 +65,24 @@ type FormValues = z.infer<typeof formSchema>;
 type UploadValues = z.infer<typeof uploadSchema>;
 
 
-function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'upload') => void }) {
+function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'upload' | 'check_status') => void }) {
     return (
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-4xl mx-auto">
             <CardHeader>
                 <CardTitle className="text-2xl md:text-3xl text-center">Gestión de Turnos para el Museo</CardTitle>
                 <CardDescription className="text-center pt-2">
                     ¿Qué deseas hacer?
                 </CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Button onClick={() => onSelectOption('new')} variant="default" className="h-24 text-lg">
                     Solicitar un Nuevo Turno
                 </Button>
                 <Button onClick={() => onSelectOption('upload')} variant="outline" className="h-24 text-lg">
                     Subir Comprobante de Pago
+                </Button>
+                 <Button onClick={() => onSelectOption('check_status')} variant="secondary" className="h-24 text-lg">
+                    Consultar Turno
                 </Button>
             </CardContent>
              <CardFooter>
@@ -366,13 +370,137 @@ function UploadSuccessStep({ referenceId, onReset }: { referenceId: string, onRe
     );
 }
 
+function CheckStatusStep({ onBack }: { onBack: () => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [referenceId, setReferenceId] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [appointment, setAppointment] = useState<Appointment | null>(null);
+    const [notFound, setNotFound] = useState(false);
+
+    const handleSearch = async () => {
+        if (!firestore || !referenceId) {
+            toast({ title: "Error", description: "Por favor, ingresa un número de referencia.", variant: "destructive" });
+            return;
+        }
+        setIsLoading(true);
+        setAppointment(null);
+        setNotFound(false);
+
+        try {
+            const appointmentsCollection = collection(firestore, 'appointments');
+            const q = query(appointmentsCollection, where("referenceId", "==", referenceId), limit(1));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                setNotFound(true);
+            } else {
+                const appData = querySnapshot.docs[0].data() as Appointment;
+                setAppointment(appData);
+            }
+        } catch (error) {
+            console.error("Error searching appointment:", error);
+            toast({ title: "Error", description: "No se pudo realizar la búsqueda. Inténtalo de nuevo.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const getStatusVariant = (status: Appointment['status']) => {
+        switch (status) {
+            case 'pending': return 'secondary';
+            case 'confirmed': return 'default';
+            case 'cancelled': return 'destructive';
+            default: return 'outline';
+        }
+    };
+
+    return (
+        <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+                <CardTitle className="text-2xl md:text-3xl">Consultar Estado del Turno</CardTitle>
+                <CardDescription>
+                    Ingresa tu número de referencia para ver los detalles y el estado de tu turno.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="flex w-full items-center space-x-2">
+                    <Input
+                        type="text"
+                        placeholder="Ej: aB3x-8fG1"
+                        value={referenceId}
+                        onChange={(e) => setReferenceId(e.target.value)}
+                        disabled={isLoading}
+                    />
+                    <Button onClick={handleSearch} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                        <span className="ml-2">Buscar</span>
+                    </Button>
+                </div>
+
+                {notFound && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>No Encontrado</AlertTitle>
+                        <AlertDescription>
+                            No se encontró ningún turno con ese número de referencia. Por favor, verifica que lo hayas escrito correctamente.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {appointment && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Detalles del Turno: {appointment.referenceId}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex justify-between"><span>Institución:</span> <span className="font-semibold">{appointment.schoolName}</span></div>
+                            <div className="flex justify-between"><span>Responsable:</span> <span className="font-semibold">{appointment.responsibleName}</span></div>
+                            <div className="flex justify-between"><span>Fecha:</span> <span className="font-semibold">{format(new Date(appointment.date + 'T00:00:00'), "dd/MM/yyyy")}</span></div>
+                            <div className="flex justify-between"><span>Horario:</span> <span className="font-semibold">{appointment.startTime}</span></div>
+                            <Separator />
+                            <div className="flex justify-between items-center">
+                                <span>Estado del Turno:</span>
+                                <Badge variant={getStatusVariant(appointment.status)} className="text-sm">
+                                    {appointment.status === 'pending' ? 'Pendiente' : appointment.status === 'confirmed' ? 'Confirmado' : 'Cancelado'}
+                                </Badge>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span>Estado del Pago:</span>
+                                <Badge variant={appointment.paid ? 'default' : 'secondary'} className="text-sm">
+                                    {appointment.paid ? 'Pagado' : 'Pendiente de Pago'}
+                                </Badge>
+                            </div>
+                             {appointment.paymentProofUrl && (
+                                <Alert className="mt-4">
+                                    <FileCheck className="h-4 w-4" />
+                                    <AlertTitle>Comprobante Cargado</AlertTitle>
+                                    <AlertDescription>
+                                        Ya has subido un comprobante de pago. Está pendiente de verificación.
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
+            </CardContent>
+            <CardFooter>
+                 <Button type="button" variant="outline" onClick={onBack} disabled={isLoading}>
+                    Volver
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
+
 const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [step, setStep] = useState<'initial' | 'terms' | 'form' | 'success' | 'upload' | 'upload_success'>('initial');
+  const [step, setStep] = useState<'initial' | 'terms' | 'form' | 'success' | 'upload' | 'upload_success' | 'check_status'>('initial');
   const [submittedReferenceId, setSubmittedReferenceId] = useState<string | null>(null);
 
   const scheduleRef = useMemoFirebase(
@@ -515,11 +643,13 @@ export default function TurnosPage() {
     setStep('initial');
   }
   
-  const handleSelectOption = (option: 'new' | 'upload') => {
+  const handleSelectOption = (option: 'new' | 'upload' | 'check_status') => {
     if (option === 'new') {
         setStep('terms');
-    } else {
+    } else if (option === 'upload') {
         setStep('upload');
+    } else {
+        setStep('check_status');
     }
   };
 
@@ -540,6 +670,8 @@ export default function TurnosPage() {
              return <UploadSuccessStep referenceId={submittedReferenceId!} onReset={handleReset} />;
         case 'success':
             return <SuccessStep referenceId={submittedReferenceId!} onReset={handleReset} />;
+        case 'check_status':
+            return <CheckStatusStep onBack={() => setStep('initial')} />;
         case 'form':
             return (
                 <Card className="max-w-4xl mx-auto">
@@ -817,3 +949,4 @@ export default function TurnosPage() {
     </div>
   );
 }
+
