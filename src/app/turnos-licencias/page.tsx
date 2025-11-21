@@ -15,12 +15,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
 import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen, PartyPopper, Copy } from 'lucide-react';
+import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen, PartyPopper, Copy, Search } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -32,6 +32,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { uploadFile } from '@/firebase/client-storage';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+
 
 // --- ZOD SCHEMA ---
 const fileSchema = z.instanceof(File, { message: 'Se requiere el archivo.' }).optional();
@@ -248,12 +250,148 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
     );
 }
 
+// --- INITIAL STEP ---
+function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'check_status') => void }) {
+    return (
+        <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+                <CardTitle className="text-2xl md:text-3xl text-center">Gestión de Turnos para Licencia de Conducir</CardTitle>
+                <CardDescription className="text-center pt-2">
+                    ¿Qué deseas hacer?
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4">
+                <Button onClick={() => onSelectOption('new')} variant="default" className="h-16 text-lg">
+                    Solicitar un Nuevo Turno
+                </Button>
+                <Button onClick={() => onSelectOption('check_status')} variant="outline" className="h-16 text-lg">
+                    Consultar Turno
+                </Button>
+            </CardContent>
+             <CardFooter>
+                <Link href="/" className="w-full">
+                    <Button variant="link" className="w-full">Volver a la página principal</Button>
+                </Link>
+            </CardFooter>
+        </Card>
+    );
+}
+
+// --- CHECK STATUS STEP ---
+function CheckStatusStep({ onBack }: { onBack: () => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [referenceId, setReferenceId] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [appointment, setAppointment] = useState<LicenseAppointment | null>(null);
+    const [notFound, setNotFound] = useState(false);
+
+    const handleSearch = async () => {
+        if (!firestore || !referenceId) {
+            toast({ title: "Error", description: "Por favor, ingresa un número de referencia.", variant: "destructive" });
+            return;
+        }
+        setIsLoading(true);
+        setAppointment(null);
+        setNotFound(false);
+
+        try {
+            const appointmentsCollection = collection(firestore, 'licenseAppointments');
+            const q = query(appointmentsCollection, where("referenceId", "==", referenceId), limit(1));
+            const querySnapshot = await getDocs(q);
+
+            if (querySnapshot.empty) {
+                setNotFound(true);
+            } else {
+                const appData = querySnapshot.docs[0].data() as LicenseAppointment;
+                setAppointment(appData);
+            }
+        } catch (error) {
+            console.error("Error searching appointment:", error);
+            toast({ title: "Error", description: "No se pudo realizar la búsqueda. Inténtalo de nuevo.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const getStatusVariant = (status: LicenseAppointment['status']) => {
+        switch (status) {
+            case 'pending': return 'secondary';
+            case 'confirmed': return 'default';
+            case 'cancelled': return 'destructive';
+            default: return 'outline';
+        }
+    };
+
+    return (
+        <Card className="max-w-2xl mx-auto">
+            <CardHeader>
+                <CardTitle className="text-2xl md:text-3xl">Consultar Estado del Turno</CardTitle>
+                <CardDescription>
+                    Ingresa tu número de referencia para ver los detalles y el estado de tu turno.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div className="flex w-full items-center space-x-2">
+                    <Input
+                        type="text"
+                        placeholder="Ej: aB3x-8fG1"
+                        value={referenceId}
+                        onChange={(e) => setReferenceId(e.target.value)}
+                        disabled={isLoading}
+                    />
+                    <Button onClick={handleSearch} disabled={isLoading}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                        <span className="ml-2">Buscar</span>
+                    </Button>
+                </div>
+
+                {notFound && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>No Encontrado</AlertTitle>
+                        <AlertDescription>
+                            No se encontró ningún turno con ese número de referencia. Por favor, verifica que lo hayas escrito correctamente.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {appointment && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Detalles del Turno: {appointment.referenceId}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex justify-between"><span>Trámite:</span> <span className="font-semibold">{appointment.procedureType}</span></div>
+                            <div className="flex justify-between"><span>Fecha:</span> <span className="font-semibold">{format(new Date(appointment.date + 'T00:00:00'), "dd/MM/yyyy")}</span></div>
+                            <div className="flex justify-between"><span>Horario:</span> <span className="font-semibold">{appointment.startTime}</span></div>
+                            <Separator />
+                            <div className="flex justify-between items-center">
+                                <span>Estado del Turno:</span>
+                                <Badge variant={getStatusVariant(appointment.status)} className="text-sm">
+                                    {appointment.status === 'pending' ? 'Pendiente' : appointment.status === 'confirmed' ? 'Confirmado' : 'Cancelado'}
+                                </Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+            </CardContent>
+            <CardFooter>
+                 <Button type="button" variant="outline" onClick={onBack} disabled={isLoading}>
+                    Volver
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
 // --- MAIN PAGE COMPONENT ---
 export default function TurnosLicenciasPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
+  const [pageStep, setPageStep] = useState<'initial' | 'form' | 'check_status' | 'success'>('initial');
+  const [currentFormStep, setCurrentFormStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedReferenceId, setSubmittedReferenceId] = useState<string | null>(null);
 
@@ -384,7 +522,7 @@ export default function TurnosLicenciasPage() {
         }
         
         setSubmittedReferenceId(referenceId);
-        setCurrentStep(steps.length); // Go to success step
+        setPageStep('success');
     } catch (error) {
         console.error('Error al guardar la solicitud de turno:', error);
         toast({
@@ -406,18 +544,17 @@ export default function TurnosLicenciasPage() {
   const handleReset = () => {
     form.reset();
     setSubmittedReferenceId(null);
-    setCurrentStep(0);
+    setCurrentFormStep(0);
+    setPageStep('initial');
   }
 
   const nextStep = async () => {
-    // Validate current step fields before proceeding
-    const fieldsToValidate = steps[currentStep].fields;
+    const fieldsToValidate = steps[currentFormStep].fields;
     const isValid = await form.trigger(fieldsToValidate);
 
     if (!isValid) return;
 
-    // Special validation for documents on step 3
-    if (currentStep === 2) {
+    if (currentFormStep === 2) {
         const procedureTypeId = form.getValues('procedureType');
         const selectedProcedure = procedureTypes.find(p => p.id === procedureTypeId);
 
@@ -449,301 +586,313 @@ export default function TurnosLicenciasPage() {
     }
 
 
-    if (currentStep === steps.length - 1) {
-        // Last step, submit the form
+    if (currentFormStep === steps.length - 1) {
         await form.handleSubmit(onSubmit)();
     } else {
-        setCurrentStep(s => Math.min(s + 1, steps.length - 1));
+        setCurrentFormStep(s => Math.min(s + 1, steps.length - 1));
     }
   };
 
-  const prevStep = () => setCurrentStep(s => Math.max(s - 1, 0));
+  const prevStep = () => setCurrentFormStep(s => Math.max(s - 1, 0));
   
-  if (currentStep === steps.length) {
-      return <SuccessStep referenceId={submittedReferenceId!} onReset={handleReset} />;
+  const handleSelectOption = (option: 'new' | 'check_status') => {
+      setPageStep(option === 'new' ? 'form' : 'check_status');
+  };
+
+  const renderContent = () => {
+    switch (pageStep) {
+        case 'initial':
+            return <InitialStep onSelectOption={handleSelectOption} />;
+        case 'check_status':
+            return <CheckStatusStep onBack={() => setPageStep('initial')} />;
+        case 'success':
+            return <SuccessStep referenceId={submittedReferenceId!} onReset={handleReset} />;
+        case 'form':
+            return (
+                 <Card className="max-w-4xl mx-auto">
+                    <CardHeader>
+                    <CardTitle className="text-2xl md:text-3xl pt-4">Solicitud de Turno para Licencia de Conducir</CardTitle>
+                    <CardDescription>Completa el formulario para solicitar tu turno. Asegúrate de conocer los requisitos para tu trámite.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4 mb-8">
+                            <Progress value={(currentFormStep + 1) / (steps.length + 1) * 100} className="w-full" />
+                            <p className="text-sm text-center text-muted-foreground">Paso {currentFormStep + 1} de {steps.length}: {steps[currentFormStep].name}</p>
+                        </div>
+
+                        {currentFormStep === 0 && (
+                            <div className="space-y-4 mb-8">
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle className="font-bold">RECUERDE</AlertTitle>
+                                    <AlertDescription>
+                                        Solo podrán realizar el trámite las personas que posean domicilio en el departamento de Tunuyán y con el último ejemplar de su D.N.I.
+                                    </AlertDescription>
+                                </Alert>
+                                <Alert>
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle className="font-bold">INFORMACIÓN IMPORTANTE - LEY 24449 - ARTÍCULO 18</AlertTitle>
+                                    <AlertDescription>
+                                        Todo ciudadano que realice modificaciones de Datos en su DOCUMENTO NACIONAL DE IDENTIDAD debe actualizar los mismos en su licencia de conducir, en un plazo no superior a 90 DÍAS de realizada la edición del mismo. La licencia CADUCA A LOS 90 DÍAS de producido el cambio no denunciado.
+                                    </AlertDescription>
+                                </Alert>
+                                <Alert>
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle className="font-bold">ARTÍCULO 14 LEY NACIONAL 24449</AlertTitle>
+                                    <AlertDescription>
+                                        <p>REQUISITOS: SABER LEER Y PARA LOS CONDUCTORES PROFESIONALES TAMBIÉN ESCRIBIR.</p>
+                                        <p className="mt-2 font-semibold">La seguridad vial es responsabilidad de todos los tunuyaninos</p>
+                                        <p className="text-sm">Municipalidad de Tunuyán.</p>
+                                    </AlertDescription>
+                                </Alert>
+                                <Alert>
+                                    <BookOpen className="h-4 w-4" />
+                                    <AlertTitle className="font-bold">Recursos y Enlaces Útiles</AlertTitle>
+                                    <AlertDescription>
+                                        <ul className="list-disc pl-5 mt-2 space-y-2">
+                                            <li>
+                                                <a href="https://www.tunuyan.gov.ar/site/wp-content/uploads/2025/09/manual-del-conductor.-licencia-particular.pdf" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Materiales de consulta
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="https://www.tunuyan.gov.ar/site/wp-content/uploads/2022/12/Senalizacion.pdf" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Señalización de tránsito
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="http://curso.seguridadvial.gob.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Curso online
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="https://boletadepago.seguridadvial.gob.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Descargar aranceles de boleto NACIONAL
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="https://vps.infogov.com.ar/rentas/tunuyan/#/public/licencias" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Descargar aranceles de boleto MUNICIPAL
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="https://mpfmza.jus.mendoza.gov.ar/denuncias-en-linea-2/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Denuncia de extravío
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="https://sistemas.seguridad.mendoza.gov.ar/webvialcaminera/servlet/com.pagosdeuda.wpdeudaonline" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Consultar multas
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="http://www.dnrec.jus.gov.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
+                                                    Turno certificado de reincidencia
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
+                        )}
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                            {currentFormStep === 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="date"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                            <FormLabel>Fecha del turno</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button
+                                                    variant={"outline"}
+                                                    className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                                    >
+                                                    {field.value ? (
+                                                        format(field.value, "PPP", { locale: es })
+                                                    ) : (
+                                                        <span>Selecciona una fecha</span>
+                                                    )}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={field.value}
+                                                    onSelect={field.onChange}
+                                                    disabled={(date) => {
+                                                        if (isScheduleLoading) return true;
+                                                        const today = new Date();
+                                                        today.setHours(0, 0, 0, 0);
+                                                        if (date < today) return true;
+                                                        if (!scheduleConfig) return true;
+
+                                                        const dateString = format(date, 'yyyy-MM-dd');
+                                                        if (scheduleConfig.blockedDates?.includes(dateString)) {
+                                                            return true;
+                                                        }
+
+                                                        const dayKey = dayNamesInEnglish[date.getDay()];
+                                                        return !scheduleConfig.days[dayKey]?.enabled;
+                                                    }}
+                                                    initialFocus
+                                                />
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                        />
+                                    <FormField
+                                        control={form.control}
+                                        name="timeSlot"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Horario disponible</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger disabled={!selectedDate || availableSlots.length === 0}>
+                                                        <SelectValue placeholder="Selecciona un horario" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                {availableSlots.map(slot => (
+                                                    <SelectItem key={slot.startTime} value={slot.startTime}>
+                                                        {`${slot.startTime} - ${slot.endTime}`}
+                                                    </SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground pt-1">No hay horarios disponibles para esta fecha.</p>}
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
+                            
+                            {currentFormStep === 1 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormField control={form.control} name="name" render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Nombre</FormLabel>
+                                        <FormControl><Input placeholder="Ej: Juan" {...field} /></FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="lastName" render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Apellido</FormLabel>
+                                        <FormControl><Input placeholder="Ej: Pérez" {...field} /></FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="dni" render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>DNI</FormLabel>
+                                        <FormControl><Input placeholder="Ej: 30123456" {...field} /></FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="email" render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Email de contacto</FormLabel>
+                                        <FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} /></FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="phone" render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Teléfono de contacto</FormLabel>
+                                        <FormControl><Input placeholder="Ej: 2622123456" {...field} /></FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                </div>
+                            )}
+
+                            {currentFormStep === 2 && (
+                                <div className="space-y-6">
+                                    <FormField
+                                        control={form.control}
+                                        name="procedureType"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Tipo de Trámite</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecciona un trámite" />
+                                                </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                {procedureTypes.map(proc => (
+                                                    <SelectItem key={proc.id} value={proc.id}>
+                                                    {proc.name}
+                                                    </SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <DocumentsFormSection control={form.control} />
+                                </div>
+                            )}
+
+
+                            <div className="flex justify-between gap-4 pt-4">
+                                {currentFormStep > 0 ? (
+                                    <Button type="button" variant="outline" onClick={prevStep} disabled={isSubmitting}>
+                                        <ChevronLeft className="w-4 h-4 mr-2" />
+                                        Anterior
+                                    </Button>
+                                ) : <Button type="button" variant="outline" onClick={() => setPageStep('initial')}>Cancelar</Button>}
+                                
+                                
+                                <Button type="button" onClick={nextStep} disabled={isSubmitting}>
+                                    {currentFormStep === steps.length - 1 ? (
+                                        isSubmitting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Enviando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle className="w-4 h-4 mr-2" />
+                                                Enviar Solicitud
+                                            </>
+                                        )
+                                    ) : (
+                                        <>
+                                            Siguiente
+                                            <ChevronRight className="w-4 h-4 ml-2" />
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                    </CardContent>
+                </Card>
+            )
+        default:
+            return null;
+    }
   }
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl md:text-3xl pt-4">Solicitud de Turno para Licencia de Conducir</CardTitle>
-          <CardDescription>Completa el formulario para solicitar tu turno. Asegúrate de conocer los requisitos para tu trámite.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="space-y-4 mb-8">
-                 <Progress value={(currentStep + 1) / (steps.length + 1) * 100} className="w-full" />
-                 <p className="text-sm text-center text-muted-foreground">Paso {currentStep + 1} de {steps.length}: {steps[currentStep].name}</p>
-            </div>
-
-            {currentStep === 0 && (
-                <div className="space-y-4 mb-8">
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle className="font-bold">RECUERDE</AlertTitle>
-                        <AlertDescription>
-                            Solo podrán realizar el trámite las personas que posean domicilio en el departamento de Tunuyán y con el último ejemplar de su D.N.I.
-                        </AlertDescription>
-                    </Alert>
-                    <Alert>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle className="font-bold">INFORMACIÓN IMPORTANTE - LEY 24449 - ARTÍCULO 18</AlertTitle>
-                        <AlertDescription>
-                            Todo ciudadano que realice modificaciones de Datos en su DOCUMENTO NACIONAL DE IDENTIDAD debe actualizar los mismos en su licencia de conducir, en un plazo no superior a 90 DÍAS de realizada la edición del mismo. La licencia CADUCA A LOS 90 DÍAS de producido el cambio no denunciado.
-                        </AlertDescription>
-                    </Alert>
-                    <Alert>
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle className="font-bold">ARTÍCULO 14 LEY NACIONAL 24449</AlertTitle>
-                        <AlertDescription>
-                            <p>REQUISITOS: SABER LEER Y PARA LOS CONDUCTORES PROFESIONALES TAMBIÉN ESCRIBIR.</p>
-                            <p className="mt-2 font-semibold">La seguridad vial es responsabilidad de todos los tunuyaninos</p>
-                            <p className="text-sm">Municipalidad de Tunuyán.</p>
-                        </AlertDescription>
-                    </Alert>
-                    <Alert>
-                        <BookOpen className="h-4 w-4" />
-                        <AlertTitle className="font-bold">Recursos y Enlaces Útiles</AlertTitle>
-                        <AlertDescription>
-                            <ul className="list-disc pl-5 mt-2 space-y-2">
-                                <li>
-                                    <a href="https://www.tunuyan.gov.ar/site/wp-content/uploads/2025/09/manual-del-conductor.-licencia-particular.pdf" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Materiales de consulta
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="https://www.tunuyan.gov.ar/site/wp-content/uploads/2022/12/Senalizacion.pdf" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Señalización de tránsito
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="http://curso.seguridadvial.gob.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Curso online
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="https://boletadepago.seguridadvial.gob.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Descargar aranceles de boleto NACIONAL
-                                    </a>
-                                </li>
-                                 <li>
-                                    <a href="https://vps.infogov.com.ar/rentas/tunuyan/#/public/licencias" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Descargar aranceles de boleto MUNICIPAL
-                                    </a>
-                                </li>
-                                 <li>
-                                    <a href="https://mpfmza.jus.mendoza.gov.ar/denuncias-en-linea-2/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Denuncia de extravío
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="https://sistemas.seguridad.mendoza.gov.ar/webvialcaminera/servlet/com.pagosdeuda.wpdeudaonline" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Consultar multas
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="http://www.dnrec.jus.gov.ar/" target="_blank" rel="noopener noreferrer" className="underline text-primary hover:text-primary/80">
-                                        Turno certificado de reincidencia
-                                    </a>
-                                </li>
-                            </ul>
-                        </AlertDescription>
-                    </Alert>
-                </div>
-            )}
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                {currentStep === 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                            control={form.control}
-                            name="date"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel>Fecha del turno</FormLabel>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <FormControl>
-                                        <Button
-                                        variant={"outline"}
-                                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                                        >
-                                        {field.value ? (
-                                            format(field.value, "PPP", { locale: es })
-                                        ) : (
-                                            <span>Selecciona una fecha</span>
-                                        )}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </FormControl>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={field.value}
-                                        onSelect={field.onChange}
-                                        disabled={(date) => {
-                                            if (isScheduleLoading) return true;
-                                            const today = new Date();
-                                            today.setHours(0, 0, 0, 0);
-                                            if (date < today) return true;
-                                            if (!scheduleConfig) return true;
-
-                                            const dateString = format(date, 'yyyy-MM-dd');
-                                            if (scheduleConfig.blockedDates?.includes(dateString)) {
-                                                return true;
-                                            }
-
-                                            const dayKey = dayNamesInEnglish[date.getDay()];
-                                            return !scheduleConfig.days[dayKey]?.enabled;
-                                        }}
-                                        initialFocus
-                                    />
-                                    </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        <FormField
-                            control={form.control}
-                            name="timeSlot"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Horario disponible</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger disabled={!selectedDate || availableSlots.length === 0}>
-                                            <SelectValue placeholder="Selecciona un horario" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {availableSlots.map(slot => (
-                                        <SelectItem key={slot.startTime} value={slot.startTime}>
-                                            {`${slot.startTime} - ${slot.endTime}`}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                {selectedDate && availableSlots.length === 0 && !areAppointmentsLoading && <p className="text-sm text-muted-foreground pt-1">No hay horarios disponibles para esta fecha.</p>}
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </div>
-                )}
-                
-                {currentStep === 1 && (
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField control={form.control} name="name" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Nombre</FormLabel>
-                            <FormControl><Input placeholder="Ej: Juan" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}/>
-                        <FormField control={form.control} name="lastName" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Apellido</FormLabel>
-                            <FormControl><Input placeholder="Ej: Pérez" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}/>
-                         <FormField control={form.control} name="dni" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>DNI</FormLabel>
-                            <FormControl><Input placeholder="Ej: 30123456" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}/>
-                         <FormField control={form.control} name="email" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Email de contacto</FormLabel>
-                            <FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}/>
-                         <FormField control={form.control} name="phone" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Teléfono de contacto</FormLabel>
-                            <FormControl><Input placeholder="Ej: 2622123456" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}/>
-                    </div>
-                )}
-
-                {currentStep === 2 && (
-                    <div className="space-y-6">
-                        <FormField
-                            control={form.control}
-                            name="procedureType"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Tipo de Trámite</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecciona un trámite" />
-                                    </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {procedureTypes.map(proc => (
-                                        <SelectItem key={proc.id} value={proc.id}>
-                                        {proc.name}
-                                        </SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <DocumentsFormSection control={form.control} />
-                    </div>
-                )}
-
-
-                <div className="flex justify-between gap-4 pt-4">
-                    {currentStep > 0 ? (
-                        <Button type="button" variant="outline" onClick={prevStep} disabled={isSubmitting}>
-                            <ChevronLeft className="w-4 h-4 mr-2" />
-                            Anterior
-                        </Button>
-                    ) : <Link href="/" passHref><Button type="button" variant="outline">Cancelar</Button></Link>}
-                    
-                    
-                    <Button type="button" onClick={nextStep} disabled={isSubmitting}>
-                        {currentStep === steps.length - 1 ? (
-                            isSubmitting ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Enviando...
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Enviar Solicitud
-                                </>
-                            )
-                        ) : (
-                            <>
-                                Siguiente
-                                <ChevronRight className="w-4 h-4 ml-2" />
-                            </>
-                        )}
-                    </Button>
-                </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      {renderContent()}
     </div>
   );
 }
-
-    
-
-    
 
     
