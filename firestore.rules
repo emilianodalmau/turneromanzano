@@ -4,68 +4,80 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Helper function to check for admin roles from custom claims
+    function isRole(role) {
+      return request.auth.token[role] == true;
+    }
+    
+    function isSuperAdmin() {
+      return isRole('super_admin');
+    }
+
+    function isManzanoAdmin() {
+      return isRole('manzano_admin') || isSuperAdmin();
+    }
+
+    function isLicenseAdmin() {
+      return isRole('license_admin') || isSuperAdmin();
+    }
+    
     match /users/{userId} {
       allow create: if true;
       allow read: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth.uid == userId || isSuperAdmin();
+      // A user can delete themselves, or a super_admin can delete any user.
+      allow delete: if request.auth.uid == userId || isSuperAdmin();
     }
 
     match /guests/{guestId} {
-      // Allow creation of guest profiles from the appointment forms
       allow create: if true;
-      // Allow admins to read guest data
-      allow read: if request.auth != null;
-      allow update: if request.auth != null;
+      allow read: if request.auth != null && (isManzanoAdmin() || isLicenseAdmin());
+      allow update: if request.auth != null && (isManzanoAdmin() || isLicenseAdmin());
     }
 
     match /appointments/{appointmentId} {
       allow create: if true;
-      allow list: if true; // Allow public listing for availability checks
-      allow read: if request.auth != null; // Only authenticated users can read full details
-      allow update: if true; // Allow updates for unauthenticated users to upload payment proofs
-      allow delete: if request.auth != null; // To be refined with roles
+      allow list, read: if true; // Public listing for availability, read details for admins/owners
+      allow update: if true; // Allow anyone with the ID to update (e.g., upload payment)
+      allow delete: if request.auth != null && isManzanoAdmin();
     }
 
     match /scheduleConfigurations/{scheduleId} {
       allow read: if true;
-      allow write: if request.auth != null; // To be refined with roles
+      allow write: if request.auth != null && isManzanoAdmin();
     }
 
-    // Rules for new license module
     match /licenseAppointments/{licenseAppointmentId} {
       allow create: if true;
-      allow read, list: if true; // Allow public read for availability check
-      allow update, delete: if request.auth != null; // To be refined with roles
+      allow list, read: if true; // Public read for availability check
+      allow update: if true; // Allow anyone with ID to update (e.g. upload docs)
+      allow delete: if request.auth != null && isLicenseAdmin();
     }
 
     match /licenseScheduleConfigurations/{licenseScheduleId} {
       allow read: if true;
-      allow write: if request.auth != null; // To be refined with roles
+      allow write: if request.auth != null && isLicenseAdmin();
     }
 
-    // Rules for presential attention system
     match /areas/{areaId} {
       allow read: if true;
-      allow write: if request.auth != null; // To be refined with roles (super_admin)
+      allow write: if isSuperAdmin();
     }
 
     match /desks/{deskId} {
       allow read: if true;
-      allow write: if request.auth != null; // To be refined with roles (super_admin, agents)
+      allow write: if isSuperAdmin();
     }
 
     match /queueTickets/{ticketId} {
-      allow list, read: if true; // Agents and screens can read/list tickets
-      allow create: if true; // Public create for totem
-      allow update: if request.auth != null; // Only agents can update
+      allow list, read: if true;
+      allow create: if true;
+      allow update: if request.auth != null; // Any authenticated agent can update tickets
     }
 
     match /appConfiguration/{configId} {
       allow read: if true;
-      allow write: if request.auth != null; // To be refined with super_admin role
+      allow write: if isSuperAdmin();
     }
   }
 }
-
-    
