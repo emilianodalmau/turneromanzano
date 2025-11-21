@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { useMemo, useState } from 'react';
+import { useCollection, useFirestore, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
 import { User } from '@/lib/types';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import {
   Table,
   TableBody,
@@ -14,9 +14,25 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+
 
 function UserList({ users }: { users: User[] }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
     
     const getRoleVariant = (role?: string) => {
         switch(role) {
@@ -26,6 +42,17 @@ function UserList({ users }: { users: User[] }) {
             default: return 'secondary';
         }
     }
+    
+    const handleDelete = (userId: string, userName: string) => {
+        if (!firestore) return;
+        const userDocRef = doc(firestore, 'users', userId);
+        deleteDocumentNonBlocking(userDocRef);
+        toast({
+            title: "Usuario Eliminado",
+            description: `El usuario ${userName} ha sido eliminado del sistema.`,
+            variant: "destructive"
+        });
+    };
 
     if (users.length === 0) {
         return <p>No hay usuarios administradores registrados en el sistema.</p>;
@@ -48,6 +75,7 @@ function UserList({ users }: { users: User[] }) {
                             <TableHead>DNI</TableHead>
                             <TableHead>Teléfono</TableHead>
                             <TableHead>Rol</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -61,6 +89,34 @@ function UserList({ users }: { users: User[] }) {
                                     <Badge variant={getRoleVariant(user.role)}>
                                         {user.role ? user.role.replace('_', ' ') : 'Sin rol'}
                                     </Badge>
+                                </TableCell>
+                                 <TableCell className="text-right">
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" disabled={user.role === 'super_admin'}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción no se puede deshacer. Se eliminará el perfil del usuario,
+                                                    pero no su cuenta de autenticación. El usuario podrá volver a iniciar sesión
+                                                    pero no tendrá permisos.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    onClick={() => handleDelete(user.id, user.name)}
+                                                    className="bg-destructive hover:bg-destructive/90"
+                                                >
+                                                    Eliminar
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </TableCell>
                             </TableRow>
                         ))}
