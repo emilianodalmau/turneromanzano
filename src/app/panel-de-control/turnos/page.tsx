@@ -106,7 +106,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         if (userData) {
             form.reset(defaultValues);
         }
-    }, [userData, defaultValues, form.reset]);
+    }, [userData, defaultValues, form]);
 
 
     const selectedDate = form.watch('date');
@@ -210,8 +210,8 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                                         <Image
                                             src={appointment.paymentProofUrl}
                                             alt="Comprobante de pago"
-                                            layout="fill"
-                                            objectFit="contain"
+                                            fill
+                                            style={{ objectFit: 'contain' }}
                                         />
                                     </div>
                                 </FormItem>
@@ -576,10 +576,6 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                                     </div>
                                      {appointment.paymentProofUrl && (
                                         <a href={appointment.paymentProofUrl} target="_blank" rel="noopener noreferrer">
-                                            <Button variant="secondary" className="w-full">
-                                                <FileText className="mr-2 h-4 w-4" />
-                                                Ver Comprobante
-                                            </Button>
                                         </a>
                                     )}
                                 </CardContent>
