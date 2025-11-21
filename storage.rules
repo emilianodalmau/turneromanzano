@@ -13,6 +13,11 @@ service firebase.storage {
     match /comprobantesPago/{allPaths=**} {
       allow write: if true;
     }
+    
+    // Regla para permitir la subida de archivos en la página de prueba.
+    match /test-uploads/{allPaths=**} {
+      allow write: if true;
+    }
 
 
     // Por defecto, se deniega la lectura y escritura a cualquier otra ruta para
