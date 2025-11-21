@@ -2,30 +2,28 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permite la escritura (carga de archivos) únicamente en la carpeta 'license-documents'
-    // y sus subcarpetas. Esto es crucial para que el formulario público pueda subir los
-    // documentos requeridos para los trámites de licencia.
+    
+    // Permite la escritura para los documentos de licencia
     match /license-documents/{allPaths=**} {
       allow write: if true;
+      // Lectura podría ser restringida si es necesario, por ahora se deja abierta para simplificar
+      allow read: if true; 
     }
     
-    // Nueva regla para permitir la carga de comprobantes de pago de turnos del museo
+    // Permite la escritura para los comprobantes de pago
     match /comprobantesPago/{allPaths=**} {
       allow write: if true;
+      allow read: if true;
     }
     
-    // Regla para permitir la subida de archivos en la página de prueba.
+    // Regla para la página de prueba: permite lectura y escritura sin autenticación.
+    // Esto es necesario para que `uploadBytes` funcione correctamente, ya que a veces
+    // realiza una comprobación de lectura antes de escribir.
     match /test-uploads/{allPaths=**} {
-      allow write: if true;
+      allow read, write: if true;
     }
 
-
-    // Por defecto, se deniega la lectura y escritura a cualquier otra ruta para
-    // mantener la seguridad del resto del bucket.
-    // Puedes añadir reglas más específicas aquí si necesitas que otras partes
-    // de tu aplicación usen Storage.
-    // match /other_path/{allPaths=**} {
-    //   allow read, write: if request.auth != null;
-    // }
+    // Por defecto, se deniega el acceso a cualquier otra ruta para seguridad.
+    // No añadir más reglas aquí a menos que sea explícitamente necesario.
   }
 }
