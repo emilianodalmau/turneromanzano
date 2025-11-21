@@ -20,7 +20,7 @@ import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, u
 import { collection, doc } from 'firebase/firestore';
 import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen, PartyPopper } from 'lucide-react';
+import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen, PartyPopper, Copy } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -193,6 +193,23 @@ function DocumentsFormSection({ control }: { control: any }) {
 
 // --- SUCCESS STEP ---
 function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: () => void }) {
+    const { toast } = useToast();
+    
+    const handleCopy = () => {
+        navigator.clipboard.writeText(referenceId).then(() => {
+            toast({
+                title: "Copiado",
+                description: "Número de referencia copiado al portapapeles.",
+            });
+        }, (err) => {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "No se pudo copiar el número de referencia.",
+            });
+        });
+    };
+
     return (
         <Card className="max-w-2xl mx-auto text-center">
             <CardHeader>
@@ -207,7 +224,12 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
             <CardContent className="space-y-6">
                 <div>
                     <p className="text-lg">Tu número de referencia de turno es:</p>
-                    <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{referenceId}</p>
+                    <div className="flex items-center gap-2 justify-center my-2">
+                        <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4">{referenceId}</p>
+                        <Button variant="outline" size="icon" onClick={handleCopy}>
+                            <Copy className="h-5 w-5" />
+                        </Button>
+                    </div>
                      <Alert variant="destructive" className="mt-4 text-left">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle className="font-bold">Importante</AlertTitle>
@@ -445,7 +467,7 @@ export default function TurnosLicenciasPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-3xl">Solicitud de Turno para Licencia de Conducir</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl">Solicitud de Turno para Licencia de Conducir</CardTitle>
           <CardDescription>Completa el formulario para solicitar tu turno. Asegúrate de conocer los requisitos para tu trámite.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -719,3 +741,5 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
+
+    
