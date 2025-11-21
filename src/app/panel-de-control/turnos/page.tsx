@@ -202,6 +202,17 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                                     <Input value={appointment.referenceId} readOnly disabled />
                                 </FormControl>
                             </FormItem>
+                            {appointment.paymentProofUrl && (
+                                <FormItem>
+                                    <FormLabel>Comprobante de Pago</FormLabel>
+                                    <a href={appointment.paymentProofUrl} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="secondary" className="w-full">
+                                            <FileText className="mr-2 h-4 w-4" />
+                                            Ver Comprobante Cargado
+                                        </Button>
+                                    </a>
+                                </FormItem>
+                            )}
                             <FormField control={form.control} name="schoolName" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Institución</FormLabel>
