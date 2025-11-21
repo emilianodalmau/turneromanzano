@@ -16,8 +16,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2 } from 'lucide-react';
@@ -31,7 +31,8 @@ import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { uploadFile } from '@/firebase/storage';
+import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { uploadPaymentProof } from '@/lib/actions';
 
 
 // --- ZOD SCHEMAS ---
@@ -234,7 +235,6 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
 }
 
 function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUploadSuccess: (referenceId: string) => void }) {
-    const firestore = useFirestore();
     const { toast } = useToast();
     const form = useForm<UploadValues>({ 
         resolver: zodResolver(uploadSchema),
@@ -246,32 +246,31 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
     const { isSubmitting } = form.formState;
 
     async function onSubmit(data: UploadValues) {
-        if (!firestore) return;
+        const formData = new FormData();
+        formData.append('referenceId', data.referenceId);
+        formData.append('paymentProof', data.paymentProof);
 
-        const appointmentsCollection = collection(firestore, 'appointments');
-        const q = query(appointmentsCollection, where("referenceId", "==", data.referenceId), limit(1));
-        
         try {
-            const querySnapshot = await getDocs(q);
-            if (querySnapshot.empty) {
-                form.setError("referenceId", { type: "manual", message: "No se encontró ningún turno con ese número de referencia." });
-                return;
+            const result = await uploadPaymentProof(formData);
+
+            if (result.success) {
+                onUploadSuccess(data.referenceId);
+            } else {
+                if (result.error === 'not_found') {
+                     form.setError("referenceId", { type: "manual", message: "No se encontró ningún turno con ese número de referencia." });
+                } else {
+                    toast({
+                        title: "Error al subir el comprobante",
+                        description: result.error || "Ocurrió un problema al subir el archivo. Por favor, inténtalo de nuevo.",
+                        variant: "destructive"
+                    });
+                }
             }
-            
-            const appointmentDoc = querySnapshot.docs[0];
-            const appointmentData = appointmentDoc.data() as Appointment;
-            
-            const filePath = `comprobantesPago/${appointmentDoc.id}/${data.paymentProof.name}`;
-            const downloadURL = await uploadFile(data.paymentProof, filePath);
-            
-            await setDocumentNonBlocking(appointmentDoc.ref, { paymentProofUrl: downloadURL }, { merge: true });
-            
-            onUploadSuccess(data.referenceId);
         } catch (error) {
             console.error(error);
             toast({
-                title: "Error al subir el comprobante",
-                description: "Ocurrió un problema al subir el archivo. Por favor, inténtalo de nuevo.",
+                title: "Error inesperado",
+                description: "Ocurrió un problema de red o en el servidor. Por favor, inténtalo de nuevo.",
                 variant: "destructive"
             });
         }
