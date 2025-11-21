@@ -37,7 +37,8 @@ export const procedureTypes: ProcedureType[] = [
     id: 'original',
     name: 'Original (Primera Vez)',
     docs: [
-        { id: 'dni', label: 'DNI (Frente y Dorso)', optional: false, isLink: false },
+        { id: 'dni_frente', label: 'DNI (Frente)', optional: false, isLink: false },
+        { id: 'dni_dorso', label: 'DNI (Dorso)', optional: false, isLink: false },
         { id: 'cuil', label: 'CUIL', optional: false, isLink: false },
         { id: 'cursos', label: 'Certificados de cursos (Nacional, Género, Estrellas Amarillas)', optional: false, isLink: true, href: 'https://www.argentina.gob.ar/servicio/mi-primera-licencia', description: 'Realizá los cursos obligatorios y obtené los certificados.' },
         { id: 'certificado_medico_opcional', label: 'Certificado médico (si padece diabetes o está bajo tratamiento)', optional: true, isLink: false },
@@ -50,16 +51,20 @@ export const procedureTypes: ProcedureType[] = [
     id: 'renovacion_ab',
     name: 'Renovación (Clase A y B)',
     docs: [
-        { id: 'dni', label: 'DNI (Frente y Dorso)', optional: false, isLink: false },
-        { id: 'licencia_actual', label: 'Licencia de conducir actual (Frente y Dorso) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'dni_frente', label: 'DNI (Frente)', optional: false, isLink: false },
+        { id: 'dni_dorso', label: 'DNI (Dorso)', optional: false, isLink: false },
+        { id: 'licencia_actual_frente', label: 'Licencia de conducir actual (Frente) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'licencia_actual_dorso', label: 'Licencia de conducir actual (Dorso)', optional: true, isLink: false },
     ],
   },
   {
     id: 'renovacion_con_ampliacion',
     name: 'Renovación con Ampliación (A, B, C, D, E, G)',
     docs: [
-        { id: 'dni', label: 'DNI (Frente y Dorso)', optional: false, isLink: false },
-        { id: 'licencia_actual', label: 'Licencia de conducir actual (Frente y Dorso) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'dni_frente', label: 'DNI (Frente)', optional: false, isLink: false },
+        { id: 'dni_dorso', label: 'DNI (Dorso)', optional: false, isLink: false },
+        { id: 'licencia_actual_frente', label: 'Licencia de conducir actual (Frente) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'licencia_actual_dorso', label: 'Licencia de conducir actual (Dorso)', optional: true, isLink: false },
         { id: 'curso_nacional', label: 'Curso de Seguridad Vial (Nacional)', optional: false, isLink: true, href: 'https://www.argentina.gob.ar/servicio/curso-nacional-de-educacion-vial-digital' },
         { id: 'certificado_reincidencia', label: 'Certificado de Reincidencia (para clases D)', optional: true, isLink: true, href: 'https://www.argentina.gob.ar/justicia/reincidencia' },
         {
@@ -80,8 +85,10 @@ export const procedureTypes: ProcedureType[] = [
     id: 'renovacion_profesional',
     name: 'Renovación Profesional (C, D)',
     docs: [
-        { id: 'dni', label: 'DNI (Frente y Dorso)', optional: false, isLink: false },
-        { id: 'licencia_actual', label: 'Licencia de conducir actual (Frente y Dorso) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'dni_frente', label: 'DNI (Frente)', optional: false, isLink: false },
+        { id: 'dni_dorso', label: 'DNI (Dorso)', optional: false, isLink: false },
+        { id: 'licencia_actual_frente', label: 'Licencia de conducir actual (Frente) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'licencia_actual_dorso', label: 'Licencia de conducir actual (Dorso)', optional: true, isLink: false },
         { id: 'certificado_reincidencia', label: 'Certificado de Reincidencia (para clases D)', optional: false, isLink: true, href: 'https://www.argentina.gob.ar/justicia/reincidencia' },
         {
             category: 'Examen Psicofísico',
@@ -101,8 +108,10 @@ export const procedureTypes: ProcedureType[] = [
     id: 'renovacion_mayores_66',
     name: 'Renovación Mayores de 66 años',
     docs: [
-        { id: 'dni', label: 'DNI (Frente y Dorso)', optional: false, isLink: false },
-        { id: 'licencia_actual', label: 'Licencia de conducir actual (Frente y Dorso) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'dni_frente', label: 'DNI (Frente)', optional: false, isLink: false },
+        { id: 'dni_dorso', label: 'DNI (Dorso)', optional: false, isLink: false },
+        { id: 'licencia_actual_frente', label: 'Licencia de conducir actual (Frente) o denuncia de extravío', optional: false, isLink: false },
+        { id: 'licencia_actual_dorso', label: 'Licencia de conducir actual (Dorso)', optional: true, isLink: false },
         { id: 'analisis_sangre_apto', label: 'Análisis de sangre con certificado de apto clínico', optional: false, isLink: false },
         { id: 'electrocardiograma_apto', label: 'Electrocardiograma con certificado de apto cardiológico', optional: false, isLink: false },
         { id: 'apto_medico_tratante_opcional', label: 'Certificado de aptitud por médico tratante (Opcional)', optional: true, isLink: false },
@@ -112,7 +121,8 @@ export const procedureTypes: ProcedureType[] = [
     id: 'inhabilitados_alcoholemia',
     name: 'Inhabilitados por Alcoholemia',
     docs: [
-        { id: 'dni', label: 'DNI (Frente y Dorso)', optional: false, isLink: false },
+        { id: 'dni_frente', label: 'DNI (Frente)', optional: false, isLink: false },
+        { id: 'dni_dorso', label: 'DNI (Dorso)', optional: false, isLink: false },
         { id: 'nota_inhabilitacion', label: 'Nota de Inhabilitación', optional: false, isLink: false },
         { id: 'cursos_rehabilitacion', label: 'Certificados de cursos (Nacional, Género, Estrellas Amarillas)', optional: false, isLink: true, href: 'https://www.argentina.gob.ar/servicio/mi-primera-licencia', description: 'Deberás realizar nuevamente los cursos obligatorios.' },
         { id: 'licencia_acompanante_rehab', label: 'Licencia de conducir de la persona que lo acompaña', optional: false, isLink: false },
