@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
-import { LicenseAppointment, LicenseScheduleConfiguration, TimeSlot, DayKey, User, procedureTypes } from '@/lib/types';
+import { LicenseAppointment, LicenseScheduleConfiguration, TimeSlot, DayKey, User, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { collection, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, Search, X as XIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const editFormSchema = z.object({
   name: z.string().min(1, "El nombre es requerido."),
@@ -82,17 +84,19 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
     const { data: userData, isLoading: isUserLoading } = useDoc<User>(userRef);
     const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<LicenseAppointment>(appointmentsCollectionRef);
     
+    const procedureId = procedureTypes.find(p => p.name === appointment.procedureType)?.id;
+
     const defaultValues = useMemo(() => ({
         name: userData?.name || '',
         lastName: userData?.lastName || '',
         dni: userData?.dni || '',
         email: userData?.email || '',
         phone: userData?.phone || '',
-        procedureType: appointment.procedureType,
+        procedureType: procedureId || '',
         date: new Date(appointment.date + 'T00:00:00'),
         timeSlot: appointment.startTime,
         status: appointment.status,
-    }), [appointment, userData]);
+    }), [appointment, userData, procedureId]);
 
     const form = useForm<EditFormValues>({
         resolver: zodResolver(editFormSchema),
@@ -103,7 +107,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
         if(userData) {
             form.reset(defaultValues);
         }
-    }, [userData, defaultValues, form.reset]);
+    }, [userData, defaultValues, form]);
 
 
     const selectedDate = form.watch('date');
@@ -162,7 +166,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
         const appointmentRef = doc(firestore, 'licenseAppointments', appointment.id);
         const updatedAppointment = {
             ...appointment,
-            procedureType: data.procedureType,
+            procedureType: procedureTypes.find(p => p.id === data.procedureType)?.name || data.procedureType,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
@@ -176,6 +180,8 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
         });
         setIsOpen(false);
     }
+
+    const documentEntries = Object.entries(appointment.documents || {});
     
     return (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -185,10 +191,34 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
             <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
                 <SheetHeader>
                     <SheetTitle>Editar Turno de Licencia</SheetTitle>
+                    <CardDescription>{appointment.referenceId}</CardDescription>
                 </SheetHeader>
                 <div className="p-4">
                      <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                           {documentEntries.length > 0 && (
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold">Documentos Cargados</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {documentEntries.map(([key, url]) => (
+                                            <div key={key} className="space-y-2">
+                                                <Label className="text-sm">{key.replace(/_/g, ' ')}</Label>
+                                                <a href={url} target="_blank" rel="noopener noreferrer">
+                                                    <div className="relative w-full h-24 mt-2 rounded-md overflow-hidden border">
+                                                        <Image
+                                                            src={url}
+                                                            alt={`Documento ${key}`}
+                                                            fill
+                                                            style={{ objectFit: 'cover' }}
+                                                        />
+                                                    </div>
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              <FormField control={form.control} name="name" render={({ field }) => (
                                 <FormItem>
@@ -238,7 +268,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
                                 render={({ field }) => (
                                     <FormItem>
                                     <FormLabel>Tipo de Trámite</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecciona un trámite" />
@@ -246,7 +276,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
                                         </FormControl>
                                         <SelectContent>
                                         {procedureTypes.map(proc => (
-                                            <SelectItem key={proc.id} value={proc.name}>
+                                            <SelectItem key={proc.id} value={proc.id}>
                                             {proc.name}
                                             </SelectItem>
                                         ))}
@@ -363,11 +393,14 @@ function LicenseAppointmentList({ appointments, users }: { appointments: License
                 const userLastName = appointment.user?.lastName.toLowerCase() || '';
                 const userDni = appointment.user?.dni.toLowerCase() || '';
                 const procedureType = appointment.procedureType.toLowerCase();
+                const referenceId = appointment.referenceId?.toLowerCase() || '';
+
 
                 if (
                     !`${userName} ${userLastName}`.includes(searchTerm) &&
                     !userDni.includes(searchTerm) &&
-                    !procedureType.includes(searchTerm)
+                    !procedureType.includes(searchTerm) &&
+                    !referenceId.includes(searchTerm)
                 ) {
                     return false;
                 }
@@ -481,8 +514,13 @@ function LicenseAppointmentList({ appointments, users }: { appointments: License
                         {groupedAppointments[date].map((appointment) => (
                             <Card key={appointment.id}>
                                 <CardHeader>
-                                    <CardTitle>{`${appointment.startTime} - ${appointment.endTime}`}</CardTitle>
-                                    <CardDescription>{appointment.procedureType}</CardDescription>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle>{`${appointment.startTime} - ${appointment.endTime}`}</CardTitle>
+                                            <CardDescription>{appointment.procedureType}</CardDescription>
+                                        </div>
+                                         {appointment.referenceId && <Badge variant="outline">{appointment.referenceId}</Badge>}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <p className="text-sm text-muted-foreground">Solicitante: {appointment.user?.name} {appointment.user?.lastName}</p>
@@ -546,5 +584,3 @@ export default function TurnosLicenciasPage() {
 
     return <LicenseAppointmentList appointments={appointments || []} users={users || []} />;
 }
-
-    
