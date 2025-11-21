@@ -75,6 +75,7 @@ export default function AdministracionUsuariosPage() {
     const { profile, isUserLoading } = useUser();
     const firestore = useFirestore();
 
+    // This query now correctly filters for documents where the 'role' field is one of the specified admin roles.
     const usersQuery = useMemoFirebase(
         () => (firestore ? query(collection(firestore, 'users'), where('role', 'in', ['manzano_admin', 'license_admin', 'super_admin'])) : null),
         [firestore]
