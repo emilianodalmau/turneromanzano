@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
-import { LicenseAppointment, LicenseScheduleConfiguration, TimeSlot, DayKey, User, procedureTypes, DocumentRequirement } from '@/lib/types';
+import { LicenseAppointment, LicenseScheduleConfiguration, TimeSlot, DayKey, Guest, procedureTypes, DocumentRequirement } from '@/lib/types';
 import { collection, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,9 +72,9 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
         [firestore]
     );
 
-    const userRef = useMemoFirebase(
-        () => (firestore && appointment.userId ? doc(firestore, 'users', appointment.userId) : null),
-        [firestore, appointment.userId]
+    const guestRef = useMemoFirebase(
+        () => (firestore && appointment.guestId ? doc(firestore, 'guests', appointment.guestId) : null),
+        [firestore, appointment.guestId]
     );
 
     const appointmentsCollectionRef = useMemoFirebase(
@@ -82,22 +83,22 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
     );
 
     const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<LicenseScheduleConfiguration>(scheduleRef);
-    const { data: userData, isLoading: isUserLoading } = useDoc<User>(userRef);
+    const { data: guestData, isLoading: isGuestLoading } = useDoc<Guest>(guestRef);
     const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<LicenseAppointment>(appointmentsCollectionRef);
     
     const procedureId = procedureTypes.find(p => p.name === appointment.procedureType)?.id;
 
     const defaultValues = useMemo(() => ({
-        name: userData?.name || '',
-        lastName: userData?.lastName || '',
-        dni: userData?.dni || '',
-        email: userData?.email || '',
-        phone: userData?.phone || '',
+        name: guestData?.name || '',
+        lastName: guestData?.lastName || '',
+        dni: guestData?.dni || '',
+        email: guestData?.email || '',
+        phone: guestData?.phone || '',
         procedureType: procedureId || '',
         date: new Date(appointment.date + 'T00:00:00'),
         timeSlot: appointment.startTime,
         status: appointment.status,
-    }), [appointment, userData, procedureId]);
+    }), [appointment, guestData, procedureId]);
 
     const form = useForm<EditFormValues>({
         resolver: zodResolver(editFormSchema),
@@ -105,10 +106,10 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
     });
     
     useEffect(() => {
-        if(userData) {
+        if(guestData) {
             form.reset(defaultValues);
         }
-    }, [userData, defaultValues, form]);
+    }, [guestData, defaultValues, form]);
 
 
     const selectedDate = form.watch('date');
@@ -152,15 +153,15 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
             return;
         }
         
-        if (userRef) {
-            const userUpdate = {
+        if (guestRef) {
+            const guestUpdate = {
                 name: data.name,
                 lastName: data.lastName,
                 dni: data.dni,
                 email: data.email,
                 phone: data.phone,
             };
-            setDocumentNonBlocking(userRef, userUpdate, { merge: true });
+            setDocumentNonBlocking(guestRef, guestUpdate, { merge: true });
         }
 
 
@@ -352,19 +353,19 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
     );
 }
 
-type AppointmentWithUser = LicenseAppointment & { user?: User };
+type AppointmentWithGuest = LicenseAppointment & { guest?: Guest };
 
-function LicenseAppointmentList({ appointments, users }: { appointments: LicenseAppointment[]; users: User[] }) {
+function LicenseAppointmentList({ appointments, guests }: { appointments: LicenseAppointment[]; guests: Guest[] }) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const appointmentsWithUsers = useMemo(() => {
-        const usersById = new Map(users.map(u => [u.id, u]));
+    const appointmentsWithGuests = useMemo(() => {
+        const guestsById = new Map(guests.map(u => [u.id, u]));
         return appointments.map(app => ({
             ...app,
-            user: usersById.get(app.userId),
+            guest: guestsById.get(app.guestId),
         }));
-    }, [appointments, users]);
+    }, [appointments, guests]);
 
     const [filters, setFilters] = useState({
         searchText: '',
@@ -383,23 +384,23 @@ function LicenseAppointmentList({ appointments, users }: { appointments: License
     };
 
     const filteredAppointments = useMemo(() => {
-        return appointmentsWithUsers.filter(appointment => {
+        return appointmentsWithGuests.filter(appointment => {
             if (filters.date && appointment.date !== format(filters.date, 'yyyy-MM-dd')) {
                 return false;
             }
             
             if (filters.searchText) {
                 const searchTerm = filters.searchText.toLowerCase();
-                const userName = appointment.user?.name.toLowerCase() || '';
-                const userLastName = appointment.user?.lastName.toLowerCase() || '';
-                const userDni = appointment.user?.dni.toLowerCase() || '';
+                const guestName = appointment.guest?.name.toLowerCase() || '';
+                const guestLastName = appointment.guest?.lastName.toLowerCase() || '';
+                const guestDni = appointment.guest?.dni.toLowerCase() || '';
                 const procedureType = appointment.procedureType.toLowerCase();
                 const referenceId = appointment.referenceId?.toLowerCase() || '';
 
 
                 if (
-                    !`${userName} ${userLastName}`.includes(searchTerm) &&
-                    !userDni.includes(searchTerm) &&
+                    !`${guestName} ${guestLastName}`.includes(searchTerm) &&
+                    !guestDni.includes(searchTerm) &&
                     !procedureType.includes(searchTerm) &&
                     !referenceId.includes(searchTerm)
                 ) {
@@ -409,7 +410,7 @@ function LicenseAppointmentList({ appointments, users }: { appointments: License
             
             return true;
         });
-    }, [appointmentsWithUsers, filters]);
+    }, [appointmentsWithGuests, filters]);
 
     const handleDelete = (appointmentId: string) => {
         if (!firestore) return;
@@ -436,7 +437,7 @@ function LicenseAppointmentList({ appointments, users }: { appointments: License
                 acc[date].push(appointment);
             }
             return acc;
-        }, {} as Record<string, AppointmentWithUser[]>);
+        }, {} as Record<string, AppointmentWithGuest[]>);
     }, [filteredAppointments]);
 
     const getStatusVariant = (status: LicenseAppointment['status']) => {
@@ -524,8 +525,8 @@ function LicenseAppointmentList({ appointments, users }: { appointments: License
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <p className="text-sm text-muted-foreground">Solicitante: {appointment.user?.name} {appointment.user?.lastName}</p>
-                                    <p className="text-sm text-muted-foreground">DNI: {appointment.user?.dni}</p>
+                                    <p className="text-sm text-muted-foreground">Solicitante: {appointment.guest?.name} {appointment.guest?.lastName}</p>
+                                    <p className="text-sm text-muted-foreground">DNI: {appointment.guest?.dni}</p>
                                     <div className="flex items-center">
                                         <p className="text-sm text-muted-foreground mr-2">Estado:</p>
                                         <Badge variant={getStatusVariant(appointment.status)}>{getStatusText(appointment.status)}</Badge>
@@ -571,17 +572,19 @@ export default function TurnosLicenciasPage() {
         [firestore]
     );
 
-    const usersQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'users') : null),
+    const guestsQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, 'guests') : null),
         [firestore]
     );
 
     const { data: appointments, isLoading: isLoadingAppointments } = useCollection<LicenseAppointment>(appointmentsQuery);
-    const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
+    const { data: guests, isLoading: isLoadingGuests } = useCollection<Guest>(guestsQuery);
 
-    if (isLoadingAppointments || isLoadingUsers) {
+    if (isLoadingAppointments || isLoadingGuests) {
         return <p>Cargando turnos...</p>;
     }
 
-    return <LicenseAppointmentList appointments={appointments || []} users={users || []} />;
+    return <LicenseAppointmentList appointments={appointments || []} guests={guests || []} />;
 }
+
+    

@@ -48,6 +48,20 @@
         "role"
       ]
     },
+    "Guest": {
+      "title": "Guest",
+      "type": "object",
+      "description": "Represents a guest who booked an appointment without being a registered user.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "lastName": { "type": "string" },
+        "dni": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["id", "name", "lastName", "dni", "phone", "email"]
+    },
     "Appointment": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Appointment",
@@ -62,9 +76,9 @@
             "type": "string",
             "description": "A user-friendly, readable ID for the appointment."
         },
-        "userId": {
+        "guestId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Appointment)"
+          "description": "Reference to a guest user in the 'guests' collection."
         },
         "date": {
           "type": "string",
@@ -127,7 +141,7 @@
       "required": [
         "id",
         "referenceId",
-        "userId",
+        "guestId",
         "date",
         "startTime",
         "endTime",
@@ -147,7 +161,7 @@
       "properties": {
         "id": { "type": "string" },
         "referenceId": { "type": "string", "description": "A user-friendly, readable ID for the appointment." },
-        "userId": { "type": "string" },
+        "guestId": { "type": "string", "description": "Reference to a guest user in the 'guests' collection." },
         "date": { "type": "string", "format": "date" },
         "startTime": { "type": "string" },
         "endTime": { "type": "string" },
@@ -163,7 +177,7 @@
           }
         }
       },
-      "required": ["id", "referenceId", "userId", "date", "startTime", "endTime", "procedureType", "status", "createdAt"]
+      "required": ["id", "referenceId", "guestId", "date", "startTime", "endTime", "procedureType", "status", "createdAt"]
     },
     "ScheduleConfiguration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -308,13 +322,22 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles. Path-based ownership enables straightforward security rules based on `request.auth.uid`.",
+          "description": "Stores user profiles for administrators. Path-based ownership enables straightforward security rules based on `request.auth.uid`.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The unique identifier of the user, matching Firebase Auth UID."
             }
           ]
+        }
+      },
+       {
+        "path": "/guests/{guestId}",
+        "definition": {
+          "entityName": "Guest",
+          "schema": { "$ref": "#/backend/entities/Guest" },
+          "description": "Stores profiles for guests who book appointments without registering. This keeps guest data separate from authenticated user data.",
+          "params": [{"name": "guestId", "description": "The unique identifier for the guest."}]
         }
       },
       {
@@ -404,6 +427,8 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is central. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles. New collections for Areas, Desks, and QueueTickets are added to support the presential attention system. A new collection for AppConfiguration is added to store global settings."
+    "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is now split into two collections: `/users` for authenticated administrators and `/guests` for non-authenticated visitors who book appointments. This separation simplifies user management and security rules. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles. New collections for Areas, Desks, and QueueTickets are added to support the presential attention system. A new collection for AppConfiguration is added to store global settings."
   }
 }
+
+    

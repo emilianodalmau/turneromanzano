@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -476,8 +477,8 @@ export default function TurnosLicenciasPage() {
     setIsSubmitting(true);
 
     try {
-        const userId = `user_${data.dni}_${Date.now()}`;
-        const userRef = doc(firestore, 'users', userId);
+        const guestId = `guest_${data.dni}_${Date.now()}`;
+        const guestRef = doc(firestore, 'guests', guestId);
         const referenceId = generateReadableId();
 
         const uploadedDocuments: Record<string, string> = {};
@@ -485,15 +486,15 @@ export default function TurnosLicenciasPage() {
             for (const docId in data.documents) {
                 const file = data.documents[docId as keyof typeof data.documents];
                 if (file instanceof File) {
-                    const filePath = `license-documents/${userId}/${procedureType}/${file.name}`;
+                    const filePath = `license-documents/${guestId}/${procedureType}/${file.name}`;
                     const downloadURL = await uploadFile(file, filePath);
                     uploadedDocuments[docId] = downloadURL;
                 }
             }
         }
 
-        const newAppointmentRequest = {
-            userId: userId,
+        const newAppointmentRequest: Omit<LicenseAppointment, 'id'> = {
+            guestId: guestId,
             referenceId: referenceId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
@@ -507,18 +508,17 @@ export default function TurnosLicenciasPage() {
         const appointmentsCollection = collection(firestore, 'licenseAppointments');
         const appointmentDocRef = await addDocumentNonBlocking(appointmentsCollection, newAppointmentRequest);
         
-        const userProfile = {
-            id: userId,
+        const guestProfile = {
+            id: guestId,
             name: data.name,
             lastName: data.lastName,
             dni: data.dni,
             phone: data.phone,
             email: data.email,
-            role: 'license_admin' as const,
         };
         
         if (appointmentDocRef) {
-          setDocumentNonBlocking(userRef, userProfile, { merge: true });
+          setDocumentNonBlocking(guestRef, guestProfile, { merge: true });
         }
         
         setSubmittedReferenceId(referenceId);
@@ -894,3 +894,5 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
+
+    

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -585,12 +586,12 @@ export default function TurnosPage() {
     }
 
     try {
-        const userId = `user_${data.dni}_${Date.now()}`;
-        const userRef = doc(firestore, 'users', userId);
+        const guestId = `guest_${data.dni}_${Date.now()}`;
+        const guestRef = doc(firestore, 'guests', guestId);
         const referenceId = generateReadableId();
 
         const newAppointmentRequest: Omit<Appointment, 'id' | 'paymentProofUrl'> = {
-            userId: userId,
+            guestId: guestId,
             referenceId: referenceId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
@@ -610,15 +611,15 @@ export default function TurnosPage() {
         const appointmentDocRef = await addDocumentNonBlocking(appointmentsCollection, newAppointmentRequest);
         
         if (appointmentDocRef) {
-          const userProfile = {
-              id: userId,
+          const guestProfile = {
+              id: guestId,
               name: data.name,
               lastName: data.lastName,
               dni: data.dni,
               phone: data.phone,
               email: data.email,
           };
-          setDocumentNonBlocking(userRef, userProfile, { merge: true });
+          setDocumentNonBlocking(guestRef, guestProfile, { merge: true });
           
           setSubmittedReferenceId(referenceId);
           setStep('success');
@@ -949,3 +950,5 @@ export default function TurnosPage() {
     </div>
   );
 }
+
+    

@@ -11,6 +11,14 @@ service cloud.firestore {
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    match /guests/{guestId} {
+      // Allow creation of guest profiles from the appointment forms
+      allow create: if true;
+      // Allow admins to read guest data
+      allow read: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+
     match /appointments/{appointmentId} {
       allow create: if true;
       allow list: if true; // Allow public listing for availability checks
@@ -59,3 +67,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

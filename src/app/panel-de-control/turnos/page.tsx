@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
-import { Appointment, ScheduleConfiguration, TimeSlot, DayKey, User } from '@/lib/types';
+import { Appointment, ScheduleConfiguration, TimeSlot, DayKey, Guest } from '@/lib/types';
 import { collection, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,9 +71,9 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         [firestore]
     );
 
-    const userRef = useMemoFirebase(
-        () => (firestore && appointment.userId ? doc(firestore, 'users', appointment.userId) : null),
-        [firestore, appointment.userId]
+    const guestRef = useMemoFirebase(
+        () => (firestore && appointment.guestId ? doc(firestore, 'guests', appointment.guestId) : null),
+        [firestore, appointment.guestId]
     );
 
     const appointmentsCollectionRef = useMemoFirebase(
@@ -81,7 +82,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
     );
 
     const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
-    const { data: userData, isLoading: isUserLoading } = useDoc<User>(userRef);
+    const { data: guestData, isLoading: isGuestLoading } = useDoc<Guest>(guestRef);
     const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsCollectionRef);
 
     const defaultValues = useMemo(() => ({
@@ -92,10 +93,10 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         date: new Date(appointment.date + 'T00:00:00'),
         timeSlot: appointment.startTime,
         status: appointment.status,
-        dni: userData?.dni || '',
-        email: userData?.email || '',
-        phone: userData?.phone || '',
-    }), [appointment, userData]);
+        dni: guestData?.dni || '',
+        email: guestData?.email || '',
+        phone: guestData?.phone || '',
+    }), [appointment, guestData]);
 
     const form = useForm<EditFormValues>({
         resolver: zodResolver(editFormSchema),
@@ -103,10 +104,10 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
     });
     
     useEffect(() => {
-        if (userData) {
+        if (guestData) {
             form.reset(defaultValues);
         }
-    }, [userData, defaultValues, form]);
+    }, [guestData, defaultValues, form]);
 
 
     const selectedDate = form.watch('date');
@@ -150,17 +151,17 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
             return;
         }
         
-        // Update user data
-        if (userRef) {
+        // Update guest data
+        if (guestRef) {
             const [firstName, ...lastNameParts] = data.responsibleName.split(' ');
-            const userUpdate = {
+            const guestUpdate = {
                 name: firstName || '',
                 lastName: lastNameParts.join(' '),
                 dni: data.dni,
                 email: data.email,
                 phone: data.phone,
             };
-            setDocumentNonBlocking(userRef, userUpdate, { merge: true });
+            setDocumentNonBlocking(guestRef, guestUpdate, { merge: true });
         }
 
 
@@ -336,19 +337,19 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
     );
 }
 
-type AppointmentWithUser = Appointment & { user?: User };
+type AppointmentWithGuest = Appointment & { guest?: Guest };
 
-function AppointmentList({ appointments, users }: { appointments: Appointment[]; users: User[] }) {
+function AppointmentList({ appointments, guests }: { appointments: Appointment[]; guests: Guest[] }) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const appointmentsWithUsers = useMemo(() => {
-        const usersById = new Map(users.map(u => [u.id, u]));
+    const appointmentsWithGuests = useMemo(() => {
+        const guestsById = new Map(guests.map(u => [u.id, u]));
         return appointments.map(app => ({
             ...app,
-            user: usersById.get(app.userId),
+            guest: guestsById.get(app.guestId),
         }));
-    }, [appointments, users]);
+    }, [appointments, guests]);
 
     const [filters, setFilters] = useState({
         searchText: '',
@@ -369,7 +370,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
     };
 
     const filteredAppointments = useMemo(() => {
-        return appointmentsWithUsers.filter(appointment => {
+        return appointmentsWithGuests.filter(appointment => {
             // Filter by date
             if (filters.date && appointment.date !== format(filters.date, 'yyyy-MM-dd')) {
                 return false;
@@ -390,18 +391,18 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                 const schoolName = appointment.schoolName.toLowerCase();
                 const schoolEmail = appointment.schoolEmail?.toLowerCase() || '';
                 const referenceId = appointment.referenceId?.toLowerCase() || '';
-                const userDni = appointment.user?.dni.toLowerCase() || '';
-                const userEmail = appointment.user?.email.toLowerCase() || '';
-                const userPhone = appointment.user?.phone.toLowerCase() || '';
+                const guestDni = appointment.guest?.dni.toLowerCase() || '';
+                const guestEmail = appointment.guest?.email.toLowerCase() || '';
+                const guestPhone = appointment.guest?.phone.toLowerCase() || '';
 
                 if (
                     !responsibleName.includes(searchTerm) &&
                     !schoolName.includes(searchTerm) &&
                     !schoolEmail.includes(searchTerm) &&
                     !referenceId.includes(searchTerm) &&
-                    !userDni.includes(searchTerm) &&
-                    !userEmail.includes(searchTerm) &&
-                    !userPhone.includes(searchTerm)
+                    !guestDni.includes(searchTerm) &&
+                    !guestEmail.includes(searchTerm) &&
+                    !guestPhone.includes(searchTerm)
                 ) {
                     return false;
                 }
@@ -409,7 +410,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
             
             return true;
         });
-    }, [appointmentsWithUsers, filters]);
+    }, [appointmentsWithGuests, filters]);
 
     const handleDelete = (appointmentId: string) => {
         if (!firestore) return;
@@ -446,7 +447,7 @@ function AppointmentList({ appointments, users }: { appointments: Appointment[];
                 acc[date].push(appointment);
             }
             return acc;
-        }, {} as Record<string, AppointmentWithUser[]>);
+        }, {} as Record<string, AppointmentWithGuest[]>);
     }, [filteredAppointments]);
 
     const getStatusVariant = (status: Appointment['status']) => {
@@ -619,17 +620,19 @@ export default function GestionTurnosPage() {
         [firestore]
     );
 
-    const usersQuery = useMemoFirebase(
-        () => (firestore ? collection(firestore, 'users') : null),
+    const guestsQuery = useMemoFirebase(
+        () => (firestore ? collection(firestore, 'guests') : null),
         [firestore]
     );
 
     const { data: appointments, isLoading: isLoadingAppointments } = useCollection<Appointment>(appointmentsQuery);
-    const { data: users, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
+    const { data: guests, isLoading: isLoadingGuests } = useCollection<Guest>(guestsQuery);
 
-    if (isLoadingAppointments || isLoadingUsers) {
+    if (isLoadingAppointments || isLoadingGuests) {
         return <p>Cargando turnos...</p>;
     }
 
-    return <AppointmentList appointments={appointments || []} users={users || []} />;
+    return <AppointmentList appointments={appointments || []} guests={guests || []} />;
 }
+
+    
