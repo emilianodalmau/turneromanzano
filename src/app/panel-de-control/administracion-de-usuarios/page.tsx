@@ -86,7 +86,7 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                             <TableHead>DNI</TableHead>
                             <TableHead>Teléfono</TableHead>
                             <TableHead>Rol</TableHead>
-                            {currentUser?.role === 'super_admin' && <TableHead className="text-right">Acciones</TableHead>}
+                            <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -116,8 +116,8 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                                         </Badge>
                                     )}
                                 </TableCell>
-                                 {currentUser?.role === 'super_admin' && (
-                                     <TableCell className="text-right">
+                                 <TableCell className="text-right">
+                                    {currentUser?.role === 'super_admin' && (
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="ghost" size="icon" disabled={user.role === 'super_admin'}>
@@ -144,8 +144,8 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
-                                    </TableCell>
-                                 )}
+                                    )}
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
