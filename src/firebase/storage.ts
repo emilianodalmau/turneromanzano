@@ -1,3 +1,5 @@
+'use server';
+
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { initializeServerFirebase } from './server-init';
 import { initializeFirebase } from './index';
@@ -33,9 +35,12 @@ export async function uploadFile(file: File, path: string): Promise<string> {
   const storageRef = ref(storage, path);
   
   try {
-    const arrayBuffer = await file.arrayBuffer();
+    // When running on the server (in a Server Action), we need to convert
+    // the file's ArrayBuffer to a Node.js Buffer for uploadBytes.
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
 
-    const snapshot = await uploadBytes(storageRef, arrayBuffer, { contentType: file.type });
+    const snapshot = await uploadBytes(storageRef, buffer, { contentType: file.type });
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
   } catch (error) {
