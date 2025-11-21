@@ -146,6 +146,7 @@
       "description": "Represents an appointment for a driver's license procedure.",
       "properties": {
         "id": { "type": "string" },
+        "referenceId": { "type": "string", "description": "A user-friendly, readable ID for the appointment." },
         "userId": { "type": "string" },
         "date": { "type": "string", "format": "date" },
         "startTime": { "type": "string" },
@@ -162,7 +163,7 @@
           }
         }
       },
-      "required": ["id", "userId", "date", "startTime", "endTime", "procedureType", "status", "createdAt"]
+      "required": ["id", "referenceId", "userId", "date", "startTime", "endTime", "procedureType", "status", "createdAt"]
     },
     "ScheduleConfiguration": {
       "$schema": "http://json-schema.org/draft-07/schema#",

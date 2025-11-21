@@ -22,7 +22,7 @@ import { LicenseAppointment, LicenseScheduleConfiguration, DayKey, TimeSlot, pro
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AlertCircle, CalendarIcon, ChevronLeft, ChevronRight, Upload, Link as LinkIcon, FileText, CheckCircle, Loader2, BookOpen, PartyPopper } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
+import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import React, { useEffect, useState, useMemo } from 'react';
@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { uploadFile } from '@/firebase/client-storage';
+import { Separator } from '@/components/ui/separator';
 
 // --- ZOD SCHEMA ---
 const fileSchema = z.instanceof(File, { message: 'Se requiere el archivo.' }).optional();
@@ -191,7 +192,7 @@ function DocumentsFormSection({ control }: { control: any }) {
 }
 
 // --- SUCCESS STEP ---
-function SuccessStep({ onReset }: { onReset: () => void }) {
+function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: () => void }) {
     return (
         <Card className="max-w-2xl mx-auto text-center">
             <CardHeader>
@@ -203,7 +204,19 @@ function SuccessStep({ onReset }: { onReset: () => void }) {
                     Hemos recibido tu solicitud. Pronto será revisada por nuestro equipo.
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+                <div>
+                    <p className="text-lg">Tu número de referencia de turno es:</p>
+                    <p className="text-4xl font-bold tracking-wider bg-muted rounded-md p-4 my-2">{referenceId}</p>
+                     <Alert variant="destructive" className="mt-4 text-left">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle className="font-bold">Importante</AlertTitle>
+                        <AlertDescription>
+                          Por favor, guarda este número para futuras consultas. Deberás presentarlo el día de tu turno.
+                        </AlertDescription>
+                    </Alert>
+                </div>
+                <Separator />
                 <p>Recibirás un correo electrónico de confirmación una vez que tu turno sea aprobado. Asegúrate de llevar toda la documentación original el día de tu cita.</p>
             </CardContent>
             <CardContent>
@@ -220,6 +233,7 @@ export default function TurnosLicenciasPage() {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedReferenceId, setSubmittedReferenceId] = useState<string | null>(null);
 
   const scheduleRef = useMemoFirebase(
     () => (firestore ? doc(firestore, 'licenseScheduleConfigurations', 'default') : null),
@@ -304,6 +318,7 @@ export default function TurnosLicenciasPage() {
     try {
         const userId = `user_${data.dni}_${Date.now()}`;
         const userRef = doc(firestore, 'users', userId);
+        const referenceId = generateReadableId();
 
         const uploadedDocuments: Record<string, string> = {};
         if (data.documents) {
@@ -319,6 +334,7 @@ export default function TurnosLicenciasPage() {
 
         const newAppointmentRequest = {
             userId: userId,
+            referenceId: referenceId,
             date: format(data.date, 'yyyy-MM-dd'),
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
@@ -345,6 +361,7 @@ export default function TurnosLicenciasPage() {
           setDocumentNonBlocking(userRef, userProfile, { merge: true });
         }
         
+        setSubmittedReferenceId(referenceId);
         setCurrentStep(steps.length); // Go to success step
     } catch (error) {
         console.error('Error al guardar la solicitud de turno:', error);
@@ -366,6 +383,7 @@ export default function TurnosLicenciasPage() {
   
   const handleReset = () => {
     form.reset();
+    setSubmittedReferenceId(null);
     setCurrentStep(0);
   }
 
@@ -420,7 +438,7 @@ export default function TurnosLicenciasPage() {
   const prevStep = () => setCurrentStep(s => Math.max(s - 1, 0));
   
   if (currentStep === steps.length) {
-      return <SuccessStep onReset={handleReset} />;
+      return <SuccessStep referenceId={submittedReferenceId!} onReset={handleReset} />;
   }
 
   return (
@@ -701,5 +719,3 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
-
-    

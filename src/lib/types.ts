@@ -185,6 +185,7 @@ export interface LicenseAppointment extends Omit<MutableLicenseAppointment, 'id'
 export interface MutableLicenseAppointment {
   id: string;
   userId: string;
+  referenceId: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -250,5 +251,3 @@ export const mendozaDepartments = [
     "Tunuyán",
     "Tupungato"
 ];
-
-    
