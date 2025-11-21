@@ -1,7 +1,7 @@
 'use client';
 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset } from '@/components/ui/sidebar';
-import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket, ShieldCheck, Briefcase, Computer, MonitorPlay, Tv } from 'lucide-react';
+import { Home, Settings, LogOut, User as UserIcon, CalendarDays, Ticket, ShieldCheck, Briefcase, Computer, MonitorPlay, Tv, Users } from 'lucide-react';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,6 +42,7 @@ export default function PanelDeControlLayout({
     if (path.includes('/atencion/desks')) return 'Gestión de Escritorios';
     if (path.includes('/atencion/agente')) return 'Puesto de Atención';
     if (path.includes('/atencion/pantalla')) return 'Pantalla de Turnos';
+    if (path.includes('/administracion-de-usuarios')) return 'Administración de Usuarios';
     return 'Panel de Control';
   }
 
@@ -149,6 +150,16 @@ export default function PanelDeControlLayout({
                       <span>
                         <Tv />
                         <span>Pantalla Pública</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <Link href="/panel-de-control/administracion-de-usuarios">
+                    <SidebarMenuButton asChild tooltip="Administrar Usuarios" isActive={pathname.startsWith('/panel-de-control/administracion-de-usuarios')}>
+                      <span>
+                        <Users />
+                        <span>Administrar Usuarios</span>
                       </span>
                     </SidebarMenuButton>
                   </Link>
