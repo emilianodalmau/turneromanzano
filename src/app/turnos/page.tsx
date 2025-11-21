@@ -16,8 +16,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2 } from 'lucide-react';
@@ -32,7 +32,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { uploadPaymentProof } from '@/lib/actions';
+import { uploadFile } from '@/firebase/client-storage';
 
 
 // --- ZOD SCHEMAS ---
@@ -236,6 +236,7 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
 
 function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUploadSuccess: (referenceId: string) => void }) {
     const { toast } = useToast();
+    const firestore = useFirestore();
     const form = useForm<UploadValues>({ 
         resolver: zodResolver(uploadSchema),
         defaultValues: {
@@ -246,31 +247,36 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
     const { isSubmitting } = form.formState;
 
     async function onSubmit(data: UploadValues) {
-        const formData = new FormData();
-        formData.append('referenceId', data.referenceId);
-        formData.append('paymentProof', data.paymentProof);
+        if (!firestore) {
+            toast({ title: "Error", description: "No se pudo conectar a la base de datos.", variant: "destructive" });
+            return;
+        }
 
         try {
-            const result = await uploadPaymentProof(formData);
+            const appointmentsCollection = collection(firestore, 'appointments');
+            const q = query(appointmentsCollection, where("referenceId", "==", data.referenceId), limit(1));
+            const querySnapshot = await getDocs(q);
 
-            if (result.success) {
-                onUploadSuccess(data.referenceId);
-            } else {
-                if (result.error === 'not_found') {
-                     form.setError("referenceId", { type: "manual", message: "No se encontró ningún turno con ese número de referencia." });
-                } else {
-                    toast({
-                        title: "Error al subir el comprobante",
-                        description: result.error || "Ocurrió un problema al subir el archivo. Por favor, inténtalo de nuevo.",
-                        variant: "destructive"
-                    });
-                }
+            if (querySnapshot.empty) {
+                form.setError("referenceId", { type: "manual", message: "No se encontró ningún turno con ese número de referencia." });
+                return;
             }
+
+            const appointmentDoc = querySnapshot.docs[0];
+            const filePath = `comprobantesPago/${appointmentDoc.id}/${data.paymentProof.name}`;
+            
+            const downloadURL = await uploadFile(data.paymentProof, filePath);
+            
+            const appointmentRef = doc(firestore, 'appointments', appointmentDoc.id);
+            updateDocumentNonBlocking(appointmentRef, { paymentProofUrl: downloadURL });
+
+            onUploadSuccess(data.referenceId);
+
         } catch (error) {
-            console.error(error);
+            console.error("Client-side upload error:", error);
             toast({
-                title: "Error inesperado",
-                description: "Ocurrió un problema de red o en el servidor. Por favor, inténtalo de nuevo.",
+                title: "Error al subir",
+                description: "Ocurrió un problema al subir el archivo. Por favor, inténtalo de nuevo.",
                 variant: "destructive"
             });
         }
@@ -360,6 +366,7 @@ function UploadSuccessStep({ referenceId, onReset }: { referenceId: string, onRe
     );
 }
 
+const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export default function TurnosPage() {
   const { toast } = useToast();
@@ -434,7 +441,7 @@ export default function TurnosPage() {
 
     setAvailableSlots(available);
 
-  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, form]);
+  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading]);
 
 
   async function onSubmit(data: FormValues) {
@@ -501,7 +508,6 @@ export default function TurnosPage() {
     }
 }
 
-  const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   
   const handleReset = () => {
     form.reset();

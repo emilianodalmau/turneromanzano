@@ -30,7 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { uploadFile } from '@/firebase/storage';
+import { uploadFile } from '@/firebase/client-storage';
 
 // --- ZOD SCHEMA ---
 const fileSchema = z.instanceof(File, { message: 'Se requiere el archivo.' }).optional();
