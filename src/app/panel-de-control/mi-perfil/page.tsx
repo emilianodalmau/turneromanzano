@@ -102,14 +102,16 @@ export default function MyProfilePage() {
                           Administrador Licencias
                         </FormLabel>
                       </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="super_admin" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Super Administrador
-                        </FormLabel>
-                      </FormItem>
+                       {profile?.role === 'super_admin' && (
+                         <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                            <RadioGroupItem value="super_admin" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                            Super Administrador
+                            </FormLabel>
+                        </FormItem>
+                       )}
                     </RadioGroup>
                   </FormControl>
                   <FormMessage />
