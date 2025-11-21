@@ -153,6 +153,16 @@ export default function PanelDeControlLayout({
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <Link href="/panel-de-control/configuracion">
+                    <SidebarMenuButton asChild tooltip="Configuración" isActive={pathname.startsWith('/panel-de-control/configuracion')}>
+                      <span>
+                        <Settings />
+                        <span>Configuración</span>
+                      </span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
               </>
             )}
 

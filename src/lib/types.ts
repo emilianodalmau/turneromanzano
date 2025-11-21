@@ -1,4 +1,5 @@
 
+
 'use client';
 
 export type DayKey = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
@@ -239,6 +240,12 @@ export interface QueueTicket {
   deskId?: string;
   originalAppointmentId?: string;
 }
+
+
+export interface AppConfiguration {
+  logoUrl?: string;
+}
+
 
 // --- LISTA DE DEPARTAMENTOS DE MENDOZA ---
 export const mendozaDepartments = [

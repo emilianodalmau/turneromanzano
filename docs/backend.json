@@ -284,6 +284,14 @@
         "originalAppointmentId": { "type": "string", "description": "The ID of the original online appointment if it was a check-in." }
       },
       "required": ["id", "ticketNumber", "areaId", "type", "status", "createdAt"]
+    },
+    "AppConfiguration": {
+      "title": "AppConfiguration",
+      "type": "object",
+      "description": "Stores global application configuration settings.",
+      "properties": {
+        "logoUrl": { "type": "string", "format": "uri", "description": "The URL of the application logo." }
+      }
     }
   },
   "auth": {
@@ -385,8 +393,17 @@
           "description": "Stores the real-time tickets for the attention queue.",
           "params": [{"name": "queueTicketId", "description": "The unique identifier for the queue ticket."}]
         }
+      },
+      {
+        "path": "/appConfiguration/{configId}",
+        "definition": {
+          "entityName": "AppConfiguration",
+          "schema": { "$ref": "#/backend/entities/AppConfiguration" },
+          "description": "Stores global application configuration like the logo URL. Should be readable by everyone but only writable by super_admins.",
+          "params": [{"name": "configId", "description": "The unique identifier for the configuration document (e.g., 'main')."}]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is central. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles. New collections for Areas, Desks, and QueueTickets are added to support the presential attention system."
+    "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is central. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles. New collections for Areas, Desks, and QueueTickets are added to support the presential attention system. A new collection for AppConfiguration is added to store global settings."
   }
 }

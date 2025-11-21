@@ -23,6 +23,12 @@ service firebase.storage {
       allow read, write: if true;
     }
 
+    // Regla para el logo de la app. Lectura pública, escritura solo para admins (a refinar con custom claims)
+    match /config/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // Por defecto, se deniega el acceso a cualquier otra ruta para seguridad.
     // No añadir más reglas aquí a menos que sea explícitamente necesario.
   }
