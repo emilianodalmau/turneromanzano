@@ -467,7 +467,7 @@ export default function TurnosLicenciasPage() {
     <div className="container mx-auto p-4 md:p-8">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl md:text-3xl pt-2">Solicitud de Turno para Licencia de Conducir</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl pt-4">Solicitud de Turno para Licencia de Conducir</CardTitle>
           <CardDescription>Completa el formulario para solicitar tu turno. Asegúrate de conocer los requisitos para tu trámite.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -741,6 +741,8 @@ export default function TurnosLicenciasPage() {
     </div>
   );
 }
+
+    
 
     
 
