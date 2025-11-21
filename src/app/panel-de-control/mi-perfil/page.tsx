@@ -48,6 +48,18 @@ export default function MyProfilePage() {
   const onSubmit = (data: ProfileFormValues) => {
     if (!firestore || !user) return;
 
+    // A user cannot assign themselves the super_admin role.
+    if (data.role === 'super_admin' && profile?.role !== 'super_admin') {
+        toast({
+            variant: "destructive",
+            title: 'Acción no permitida',
+            description: 'No puedes asignarte el rol de Super Administrador.',
+        });
+        // Reset form to current profile role to avoid inconsistent state
+        form.reset({ role: profile?.role || 'license_admin' });
+        return;
+    }
+
     const userDocRef = doc(firestore, 'users', user.uid);
     setDocumentNonBlocking(userDocRef, { role: data.role }, { merge: true });
 
@@ -83,7 +95,7 @@ export default function MyProfilePage() {
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="flex flex-col space-y-1"
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
@@ -102,16 +114,6 @@ export default function MyProfilePage() {
                           Administrador Licencias
                         </FormLabel>
                       </FormItem>
-                       {profile?.role === 'super_admin' && (
-                         <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                            <RadioGroupItem value="super_admin" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                            Super Administrador
-                            </FormLabel>
-                        </FormItem>
-                       )}
                     </RadioGroup>
                   </FormControl>
                   <FormMessage />
