@@ -17,12 +17,6 @@ export default function Home() {
       href: '/turnos',
       icon: Ticket,
     },
-    {
-      title: 'Turnos para Licencias de Conducir',
-      description: 'Gestiona tu turno para trámites de licencia de conducir.',
-      href: '/turnos-licencias',
-      icon: Shield,
-    },
   ];
 
   const adminAndTools = [
