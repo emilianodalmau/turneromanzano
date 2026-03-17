@@ -18,8 +18,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
-import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
+import { collection, doc, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments, School } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search, ChevronsUpDown, Check } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -36,8 +36,6 @@ import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-b
 import { uploadFile } from '@/firebase/client-storage';
 import { Badge } from '@/components/ui/badge';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { schoolData } from '@/lib/data/school-data';
-
 
 // --- ZOD SCHEMAS ---
 const formSchema = z.object({
@@ -499,7 +497,7 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
 
 const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-function SchoolCombobox({ field, form }: { field: any, form: any }) {
+function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form: any, schools: School[], isLoading: boolean }) {
     const [open, setOpen] = useState(false);
 
     return (
@@ -515,7 +513,7 @@ function SchoolCombobox({ field, form }: { field: any, form: any }) {
                         )}
                     >
                         {field.value
-                            ? schoolData.find(
+                            ? schools.find(
                                 (school) => school.name === field.value
                             )?.name
                             : "Selecciona una institución"}
@@ -527,29 +525,35 @@ function SchoolCombobox({ field, form }: { field: any, form: any }) {
                 <Command>
                     <CommandInput placeholder="Buscar institución..." />
                     <CommandList>
-                        <CommandEmpty>No se encontró la institución.</CommandEmpty>
-                        <CommandGroup>
-                            {schoolData.map((school) => (
-                                <CommandItem
-                                    value={school.name}
-                                    key={school.name}
-                                    onSelect={() => {
-                                        form.setValue("schoolName", school.name)
-                                        setOpen(false)
-                                    }}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            school.name === field.value
-                                                ? "opacity-100"
-                                                : "opacity-0"
-                                        )}
-                                    />
-                                    {school.name}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
+                        {isLoading ? (
+                            <div className="p-4 text-sm text-center text-muted-foreground">Cargando escuelas...</div>
+                        ) : (
+                            <>
+                                <CommandEmpty>No se encontró la institución.</CommandEmpty>
+                                <CommandGroup>
+                                    {schools.map((school) => (
+                                        <CommandItem
+                                            value={school.name}
+                                            key={school.id}
+                                            onSelect={() => {
+                                                form.setValue("schoolName", school.name)
+                                                setOpen(false)
+                                            }}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    school.name === field.value
+                                                        ? "opacity-100"
+                                                        : "opacity-0"
+                                                )}
+                                            />
+                                            {school.name}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </>
+                        )}
                     </CommandList>
                 </Command>
             </PopoverContent>
@@ -575,8 +579,14 @@ export default function TurnosPage() {
     [firestore]
   );
   
+  const schoolsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'schools'), orderBy('name')) : null),
+    [firestore]
+  );
+
   const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
   const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsCollectionRef);
+  const { data: schools, isLoading: isLoadingSchools } = useCollection<School>(schoolsQuery);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -764,7 +774,7 @@ export default function TurnosPage() {
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Nombre de la escuela o institución</FormLabel>
-                                            <SchoolCombobox field={field} form={form} />
+                                            <SchoolCombobox field={field} form={form} schools={schools || []} isLoading={isLoadingSchools} />
                                             <FormMessage />
                                         </FormItem>
                                     )}

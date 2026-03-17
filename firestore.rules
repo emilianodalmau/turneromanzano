@@ -74,6 +74,11 @@ service cloud.firestore {
       allow update: if request.auth != null; 
     }
 
+    match /schools/{schoolId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
     match /appConfiguration/{configId} {
       allow read: if true;
       allow write: if isSuperAdmin();

@@ -255,6 +255,11 @@ export interface AppConfiguration {
   logoUrl?: string;
 }
 
+export interface School {
+  id: string;
+  name: string;
+}
+
 
 // --- LISTA DE DEPARTAMENTOS DE MENDOZA ---
 export const mendozaDepartments = [
@@ -277,5 +282,3 @@ export const mendozaDepartments = [
     "Tunuyán",
     "Tupungato"
 ];
-
-    

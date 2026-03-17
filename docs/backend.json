@@ -299,6 +299,18 @@
       },
       "required": ["id", "ticketNumber", "areaId", "type", "status", "createdAt"]
     },
+    "School": {
+      "title": "School",
+      "type": "object",
+      "description": "Represents an educational institution.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the school."
+        }
+      },
+      "required": ["name"]
+    },
     "AppConfiguration": {
       "title": "AppConfiguration",
       "type": "object",
@@ -418,6 +430,22 @@
         }
       },
       {
+        "path": "/schools/{schoolId}",
+        "definition": {
+          "entityName": "School",
+          "schema": {
+            "$ref": "#/backend/entities/School"
+          },
+          "description": "Stores the list of all available schools for appointment forms.",
+          "params": [
+            {
+              "name": "schoolId",
+              "description": "The unique identifier of the school."
+            }
+          ]
+        }
+      },
+      {
         "path": "/appConfiguration/{configId}",
         "definition": {
           "entityName": "AppConfiguration",
@@ -430,5 +458,3 @@
     "reasoning": "The Firestore structure is designed for clarity, security, and role-based access. User data is now split into two collections: `/users` for authenticated administrators and `/guests` for non-authenticated visitors who book appointments. This separation simplifies user management and security rules. Museum and license appointments (and their configurations) are stored in separate top-level collections to enforce strict access control via security rules based on user roles. New collections for Areas, Desks, and QueueTickets are added to support the presential attention system. A new collection for AppConfiguration is added to store global settings."
   }
 }
-
-    
