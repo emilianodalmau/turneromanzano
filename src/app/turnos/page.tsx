@@ -21,7 +21,7 @@ import { useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNon
 import { collection, doc, query, where, getDocs, limit } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search } from 'lucide-react';
+import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search, ChevronsUpDown, Check } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -35,6 +35,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { uploadFile } from '@/firebase/client-storage';
 import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { schoolData } from '@/lib/data/school-data';
 
 
 // --- ZOD SCHEMAS ---
@@ -497,6 +499,65 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
 
 const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
+function SchoolCombobox({ field, form }: { field: any, form: any }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <FormControl>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                        )}
+                    >
+                        {field.value
+                            ? schoolData.find(
+                                (school) => school.name === field.value
+                            )?.name
+                            : "Selecciona una institución"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </FormControl>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder="Buscar institución..." />
+                    <CommandList>
+                        <CommandEmpty>No se encontró la institución.</CommandEmpty>
+                        <CommandGroup>
+                            {schoolData.map((school) => (
+                                <CommandItem
+                                    value={school.name}
+                                    key={school.name}
+                                    onSelect={() => {
+                                        form.setValue("schoolName", school.name)
+                                        setOpen(false)
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            school.name === field.value
+                                                ? "opacity-100"
+                                                : "opacity-0"
+                                        )}
+                                    />
+                                    {school.name}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -701,12 +762,10 @@ export default function TurnosPage() {
                                     control={form.control}
                                     name="schoolName"
                                     render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Nombre de la escuela o institución</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Ej: Escuela N°1" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Nombre de la escuela o institución</FormLabel>
+                                            <SchoolCombobox field={field} form={form} />
+                                            <FormMessage />
                                         </FormItem>
                                     )}
                                 />
@@ -950,5 +1009,3 @@ export default function TurnosPage() {
     </div>
   );
 }
-
-    
