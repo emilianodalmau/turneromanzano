@@ -43,7 +43,6 @@ export default function LoginPage() {
         description: "Serás redirigido a tu panel de control.",
       });
     } catch (error: any) {
-      console.error("Sign in error:", error);
       if (error.code === 'auth/invalid-credential') {
         toast({
           variant: "destructive",
@@ -93,7 +92,6 @@ export default function LoginPage() {
       });
       
     } catch (error: any) {
-        console.error("Sign up error:", error);
         if (error.code === 'auth/email-already-in-use') {
              toast({
                 variant: "destructive",
