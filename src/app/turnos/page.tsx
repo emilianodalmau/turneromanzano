@@ -1,7 +1,4 @@
-
-
 'use client';
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -61,10 +58,8 @@ const uploadSchema = z.object({
         .refine(file => file.size < 5 * 1024 * 1024, 'El archivo no debe exceder los 5MB.')
 });
 
-
 type FormValues = z.infer<typeof formSchema>;
 type UploadValues = z.infer<typeof uploadSchema>;
-
 
 function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'upload' | 'check_status') => void }) {
     return (
@@ -97,7 +92,6 @@ function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'upl
 
 function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void, onBack: () => void }) {
     const [accepted, setAccepted] = useState(false);
-
     return (
         <Card className="max-w-4xl mx-auto">
             <CardHeader>
@@ -105,7 +99,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
             </CardHeader>
             <CardContent className="space-y-6">
                  <div className="space-y-4 text-muted-foreground prose-sm prose-p:my-2 prose-headings:my-4 max-h-[60vh] overflow-y-auto pr-4">
-                    <h3 className="text-lg font-semibold text-foreground">Programa de Turismo Educativo 2026: “Un viaje a la naturaleza y la historia de Los Chacayes”</h3>
+                    <h3 className="text-lg font-semibold text-foreground">Programa de Turismo Educativo 2026: "Un viaje a la naturaleza y la historia de Los Chacayes"</h3>
                     <p>Estimada/o docente,</p>
                     <p>Desde la Dirección de Turismo de Tunuyán, nos complace presentarles nuestro Programa de Turismo Educativo: "Un viaje a la naturaleza y la historia de Los Chacayes". Una experiencia diseñada para enriquecer el aprendizaje de sus estudiantes y conectar con el valioso patrimonio de nuestra región.</p>
                     <p>Esta aventura tiene una duración de una hora y treinta minutos aproximadamente. Se inicia con el encuentro con uno de nuestros guías en el ingreso al Museo Retorno a la Patria, continuando luego al Museo Arqueológico y de Ciencias Naturales (o viceversa). La experiencia prosigue con una visita al Monumento Retorno a la Patria, donde se realizará una foto grupal, y culmina en el icónico Árbol Histórico Manzano de Tunuyán.</p>
@@ -155,7 +149,6 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
                         Acepto las condiciones
                     </label>
                 </div>
-
                 <div className="flex justify-between gap-4">
                      <Button variant="outline" onClick={onBack}>Volver</Button>
                     <Button onClick={onAccepted} disabled={!accepted}>
@@ -170,7 +163,6 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
 function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: () => void }) {
     const { toast } = useToast();
     const cbu = '19103215-55032100256696';
-
     const handleCopyCbu = () => {
         navigator.clipboard.writeText(cbu).then(() => {
             toast({
@@ -212,7 +204,6 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
                 </div>
                 
                 <Separator />
-
                 <div className="text-left space-y-4">
                     <h4 className="font-semibold text-lg text-center">Datos para el Pago</h4>
                     <p className="text-muted-foreground">
@@ -230,7 +221,6 @@ function SuccessStep({ referenceId, onReset }: { referenceId: string, onReset: (
                     </div>
                      <p className="text-sm text-muted-foreground">Alias: <span className="font-semibold text-foreground">Municipalidad.Tunuyan.Tur</span></p>
                 </div>
-
             </CardContent>
             <CardFooter className="flex justify-center">
                 <Button onClick={onReset}>Solicitar Otro Turno</Button>
@@ -250,23 +240,19 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
         }
     });
     const { isSubmitting } = form.formState;
-
     async function onSubmit(data: UploadValues) {
         if (!firestore) {
             toast({ title: "Error", description: "No se pudo conectar a la base de datos.", variant: "destructive" });
             return;
         }
-
         try {
             const appointmentsCollection = collection(firestore, 'appointments');
             const q = query(appointmentsCollection, where("referenceId", "==", data.referenceId), limit(1));
             const querySnapshot = await getDocs(q);
-
             if (querySnapshot.empty) {
                 form.setError("referenceId", { type: "manual", message: "No se encontró ningún turno con ese número de referencia." });
                 return;
             }
-
             const appointmentDoc = querySnapshot.docs[0];
             const filePath = `comprobantesPago/${appointmentDoc.id}/${data.paymentProof.name}`;
             
@@ -274,9 +260,7 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
             
             const appointmentRef = doc(firestore, 'appointments', appointmentDoc.id);
             updateDocumentNonBlocking(appointmentRef, { paymentProofUrl: downloadURL });
-
             onUploadSuccess(data.referenceId);
-
         } catch (error) {
             console.error("Client-side upload error:", error);
             toast({
@@ -286,7 +270,6 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
             });
         }
     }
-
     return (
          <Card className="max-w-2xl mx-auto">
             <CardHeader>
@@ -378,7 +361,6 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
     const [isLoading, setIsLoading] = useState(false);
     const [appointment, setAppointment] = useState<Appointment | null>(null);
     const [notFound, setNotFound] = useState(false);
-
     const handleSearch = async () => {
         if (!firestore || !referenceId) {
             toast({ title: "Error", description: "Por favor, ingresa un número de referencia.", variant: "destructive" });
@@ -387,12 +369,10 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
         setIsLoading(true);
         setAppointment(null);
         setNotFound(false);
-
         try {
             const appointmentsCollection = collection(firestore, 'appointments');
             const q = query(appointmentsCollection, where("referenceId", "==", referenceId), limit(1));
             const querySnapshot = await getDocs(q);
-
             if (querySnapshot.empty) {
                 setNotFound(true);
             } else {
@@ -415,7 +395,6 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
             default: return 'outline';
         }
     };
-
     return (
         <Card className="max-w-2xl mx-auto">
             <CardHeader>
@@ -438,7 +417,6 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
                         <span className="ml-2">Buscar</span>
                     </Button>
                 </div>
-
                 {notFound && (
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
@@ -448,7 +426,6 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
                         </AlertDescription>
                     </Alert>
                 )}
-
                 {appointment && (
                     <Card>
                         <CardHeader>
@@ -493,7 +470,6 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
         </Card>
     );
 }
-
 
 const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -567,7 +543,6 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
     );
 }
 
-
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -579,7 +554,6 @@ export default function TurnosPage() {
     () => (firestore ? doc(firestore, 'scheduleConfigurations', 'default') : null),
     [firestore]
   );
-
   const appointmentsCollectionRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'appointments') : null),
     [firestore]
@@ -618,10 +592,8 @@ export default function TurnosPage() {
       setAvailableSlots([]);
       return;
     }
-
     const dayKey = dayNamesInEnglish[selectedDate.getDay()];
     const dayConfig = scheduleConfig.days[dayKey];
-
     if (!dayConfig || !dayConfig.enabled) {
       setAvailableSlots([]);
       return;
@@ -646,27 +618,22 @@ export default function TurnosPage() {
     });
 
     setAvailableSlots(available);
-
   }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading]);
-
 
   async function onSubmit(data: FormValues) {
     if (!firestore) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar a la base de datos.' });
         return;
     }
-
     const selectedSlot = availableSlots.find(slot => slot.startTime === data.timeSlot);
     if (!selectedSlot) {
         toast({ variant: 'destructive', title: 'Error', description: 'El horario seleccionado ya no está disponible.' });
         return;
     }
-
     try {
         const guestId = `guest_${data.dni}_${Date.now()}`;
         const guestRef = doc(firestore, 'guests', guestId);
         const referenceId = generateReadableId();
-
         const newAppointmentRequest: Omit<Appointment, 'id' | 'paymentProofUrl'> = {
             guestId: guestId,
             referenceId: referenceId,
@@ -683,7 +650,6 @@ export default function TurnosPage() {
             paid: false,
             createdAt: new Date().toISOString(),
         };
-
         const appointmentsCollection = collection(firestore, 'appointments');
         const appointmentDocRef = await addDocumentNonBlocking(appointmentsCollection, newAppointmentRequest);
         
@@ -703,7 +669,6 @@ export default function TurnosPage() {
         } else {
              throw new Error("No se pudo obtener la referencia del documento del turno.");
         }
-
     } catch (error) {
         console.error('Error al guardar la solicitud de turno:', error);
         toast({
@@ -712,8 +677,7 @@ export default function TurnosPage() {
             description: 'No se pudo enviar la solicitud. Por favor, inténtalo de nuevo.',
         });
     }
-}
-
+  }
   
   const handleReset = () => {
     form.reset();
@@ -833,12 +797,10 @@ export default function TurnosPage() {
                                                     const today = new Date();
                                                     today.setHours(0, 0, 0, 0);
                                                     if (date < today) return true;
-
                                                     const dateString = format(date, 'yyyy-MM-dd');
                                                     if (scheduleConfig?.blockedDates?.includes(dateString)) {
                                                         return true;
                                                     }
-
                                                     const dayKey = dayNamesInEnglish[date.getDay()];
                                                     if (!scheduleConfig?.days[dayKey]?.enabled) {
                                                         return true;
@@ -932,7 +894,6 @@ export default function TurnosPage() {
                                 />
                             </div>
                         </div>
-
                         <div className="space-y-4">
                             <h3 className="text-lg font-medium">Datos del Responsable de la salida</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1003,7 +964,6 @@ export default function TurnosPage() {
                                 />
                             </div>
                         </div>
-
                         <div className="flex flex-col md:flex-row gap-4">
                             <Button type="submit" className="w-full">Enviar Solicitud</Button>
                             <Button type="button" variant="outline" className="w-full" onClick={() => setStep('terms')}>Volver</Button>
@@ -1018,11 +978,9 @@ export default function TurnosPage() {
     }
   }
 
-
   return (
     <div className="container mx-auto p-4 md:p-8">
         {renderStep()}
     </div>
   );
 }
-
