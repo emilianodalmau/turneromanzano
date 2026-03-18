@@ -535,8 +535,8 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
                                         <CommandItem
                                             value={school.name}
                                             key={school.id}
-                                            onSelect={(currentValue) => {
-                                                form.setValue("schoolName", currentValue)
+                                            onSelect={() => {
+                                                form.setValue("schoolName", school.name)
                                                 setOpen(false)
                                             }}
                                         >
