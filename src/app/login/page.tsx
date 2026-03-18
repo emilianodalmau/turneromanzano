@@ -78,7 +78,7 @@ export default function LoginPage() {
       const profileData = {
           id: user.uid,
           email: user.email,
-          role: 'license_admin', // Default role
+          role: 'manzano_admin', // Default role
           name: '',
           lastName: '',
           dni: '',
