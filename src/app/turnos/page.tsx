@@ -26,7 +26,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -499,7 +499,6 @@ const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday',
 
 function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form: any, schools: School[], isLoading: boolean }) {
     const [open, setOpen] = useState(false);
-
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -521,7 +520,10 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
                     </Button>
                 </FormControl>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <PopoverContent
+                className="w-[--radix-popover-trigger-width] p-0"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
                 <Command>
                     <CommandInput placeholder="Buscar institución..." />
                     <CommandList>
@@ -535,9 +537,13 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
                                         <CommandItem
                                             value={school.name}
                                             key={school.id}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }}
                                             onSelect={() => {
-                                                form.setValue("schoolName", school.name)
-                                                setOpen(false)
+                                                form.setValue("schoolName", school.name, { shouldValidate: true });
+                                                setOpen(false);
                                             }}
                                         >
                                             <Check
@@ -1019,3 +1025,4 @@ export default function TurnosPage() {
     </div>
   );
 }
+
