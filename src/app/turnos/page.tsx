@@ -18,7 +18,7 @@ import { useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNon
 import { collection, doc, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments, School } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search } from 'lucide-react';
+import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search, ChevronsUpDown, Check } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -32,6 +32,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { uploadFile } from '@/firebase/client-storage';
 import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
 // --- ZOD SCHEMAS ---
 const formSchema = z.object({
@@ -472,6 +473,76 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
 
 const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
+function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form: any, schools: School[], isLoading: boolean }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <FormControl>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                            "w-full justify-between",
+                            !field.value && "text-muted-foreground"
+                        )}
+                    >
+                        {field.value
+                            ? schools.find(
+                                (school) => school.name === field.value
+                            )?.name
+                            : "Selecciona una institución"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </FormControl>
+            </PopoverTrigger>
+            <PopoverContent
+                className="w-[--radix-popover-trigger-width] p-0"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <Command>
+                    <CommandInput placeholder="Buscar institución..." />
+                    <CommandList>
+                        {isLoading ? (
+                            <div className="p-4 text-sm text-center text-muted-foreground">Cargando escuelas...</div>
+                        ) : (
+                            <>
+                                <CommandEmpty>No se encontró la institución.</CommandEmpty>
+                                <CommandGroup>
+                                    {schools.map((school) => (
+                                        <CommandItem
+                                            value={school.name}
+                                            key={school.id}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }}
+                                            onSelect={() => {
+                                                form.setValue("schoolName", school.name, { shouldValidate: true });
+                                                setOpen(false);
+                                            }}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    school.name === field.value
+                                                        ? "opacity-100"
+                                                        : "opacity-0"
+                                                )}
+                                            />
+                                            {school.name}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </>
+                        )}
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 export default function TurnosPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -487,9 +558,15 @@ export default function TurnosPage() {
     () => (firestore ? collection(firestore, 'appointments') : null),
     [firestore]
   );
+  
+  const schoolsQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'schools'), orderBy('name')) : null),
+    [firestore]
+  );
 
   const { data: scheduleConfig, isLoading: isScheduleLoading } = useDoc<ScheduleConfiguration>(scheduleRef);
   const { data: allAppointments, isLoading: areAppointmentsLoading } = useCollection<Appointment>(appointmentsCollectionRef);
+  const { data: schools, isLoading: isLoadingSchools } = useCollection<School>(schoolsQuery);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -665,11 +742,9 @@ export default function TurnosPage() {
                                     control={form.control}
                                     name="schoolName"
                                     render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="flex flex-col">
                                             <FormLabel>Nombre de la escuela o institución</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Nombre de la institución" {...field} />
-                                            </FormControl>
+                                            <SchoolCombobox field={field} form={form} schools={schools || []} isLoading={isLoadingSchools} />
                                             <FormMessage />
                                         </FormItem>
                                     )}
