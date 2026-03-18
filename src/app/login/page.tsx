@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { doc } from 'firebase/firestore';
-import { UserCredential } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
@@ -27,7 +26,7 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (!auth) return;
     if (!email || !password) {
       toast({
@@ -37,7 +36,28 @@ export default function LoginPage() {
       });
       return;
     }
-    initiateEmailSignIn(auth, email, password);
+    try {
+      await initiateEmailSignIn(auth, email, password);
+      toast({
+        title: "Inicio de sesión exitoso",
+        description: "Serás redirigido a tu panel de control.",
+      });
+    } catch (error: any) {
+      console.error("Sign in error:", error);
+      if (error.code === 'auth/invalid-credential') {
+        toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: "Las credenciales son incorrectas. Por favor, verifica tu correo y contraseña.",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error de inicio de sesión",
+          description: "Ha ocurrido un error inesperado. Por favor, inténtalo de nuevo.",
+        });
+      }
+    }
   };
   
   const handleSignUp = async () => {
@@ -55,7 +75,6 @@ export default function LoginPage() {
       const userCredential = await initiateEmailSignUp(auth, email, password);
       const user = userCredential.user;
       
-      // Create user profile document right after sign up to ensure role is set
       const userDocRef = doc(firestore, 'users', user.uid);
       const profileData = {
           id: user.uid,
