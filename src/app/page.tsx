@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Ticket, Shield, LogIn, Monitor, Tv } from 'lucide-react';
+import { ArrowRight, Ticket, LogIn } from 'lucide-react';
 import { useUser } from '@/firebase';
 
 export default function Home() {
@@ -20,19 +20,6 @@ export default function Home() {
   ];
 
   const adminAndTools = [
-     {
-      title: 'Sistema de Turnos Presencial',
-      description: 'Genera un ticket para ser atendido en el momento.',
-      href: '/totem',
-      icon: Monitor,
-    },
-     {
-      title: 'Ver Pantalla de Turnos',
-      description: 'Visualiza los últimos turnos llamados en las pantallas.',
-      href: '/pantalla',
-      icon: Tv,
-      target: '_blank'
-    },
     {
       title: 'Acceso Personal',
       description: 'Inicia sesión para administrar turnos y configuraciones.',
@@ -61,7 +48,7 @@ export default function Home() {
 
         <div className="w-full max-w-4xl pt-8">
             <h2 className="text-2xl font-semibold mb-6">¿Qué trámite necesitas hacer?</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-6 max-w-md mx-auto">
                 {mainActions.map((action) => (
                 <Card key={action.href} className="hover:shadow-lg transition-shadow">
                     <CardHeader className="flex flex-row items-center gap-4">
@@ -83,7 +70,7 @@ export default function Home() {
 
         <div className="w-full max-w-4xl pt-8">
             <h2 className="text-2xl font-semibold mb-6">Herramientas y Acceso</h2>
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-1 gap-6 max-w-sm mx-auto">
                  {adminAndTools.map((action) => (
                     <Link key={action.href} href={action.href} passHref target={action.target || '_self'}>
                         <Card className="h-full flex flex-col justify-between hover:bg-muted/50 transition-colors">
