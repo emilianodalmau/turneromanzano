@@ -1,10 +1,9 @@
-
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Ticket, LogIn } from 'lucide-react';
+import { ArrowRight, Ticket } from 'lucide-react';
 import { useUser } from '@/firebase';
 
 export default function Home() {
@@ -16,15 +15,6 @@ export default function Home() {
       description: 'Solicita un turno para visitas educativas al Manzano Histórico.',
       href: '/turnos',
       icon: Ticket,
-    },
-  ];
-
-  const adminAndTools = [
-    {
-      title: 'Acceso Personal',
-      description: 'Inicia sesión para administrar turnos y configuraciones.',
-      href: '/login',
-      icon: LogIn,
     },
   ];
 
@@ -64,27 +54,6 @@ export default function Home() {
                     </Link>
                     </CardContent>
                 </Card>
-                ))}
-            </div>
-        </div>
-
-        <div className="w-full max-w-4xl pt-8">
-            <h2 className="text-2xl font-semibold mb-6">Herramientas y Acceso</h2>
-             <div className="grid grid-cols-1 md:grid-cols-1 gap-6 max-w-sm mx-auto">
-                 {adminAndTools.map((action) => (
-                    <Link key={action.href} href={action.href} passHref target={action.target || '_self'}>
-                        <Card className="h-full flex flex-col justify-between hover:bg-muted/50 transition-colors">
-                            <CardHeader>
-                                <div className="flex items-center gap-3">
-                                    <action.icon className="w-6 h-6 text-muted-foreground"/>
-                                    <CardTitle className="text-lg">{action.title}</CardTitle>
-                                </div>
-                            </CardHeader>
-                             <CardContent>
-                                 <p className="text-sm text-muted-foreground">{action.description}</p>
-                            </CardContent>
-                        </Card>
-                    </Link>
                 ))}
             </div>
         </div>
