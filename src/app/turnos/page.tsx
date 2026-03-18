@@ -473,8 +473,10 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
 
 const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form: any, schools: School[], isLoading: boolean }) {
+
+function SchoolCombobox({ field, schools, isLoading }: { field: { value: string, onChange: (value: string) => void }, schools: School[], isLoading: boolean }) {
     const [open, setOpen] = useState(false);
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -482,66 +484,52 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
                     <Button
                         variant="outline"
                         role="combobox"
-                        className={cn(
-                            "w-full justify-between",
-                            !field.value && "text-muted-foreground"
-                        )}
+                        aria-expanded={open}
+                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                     >
                         {field.value
-                            ? schools.find(
-                                (school) => school.name === field.value
-                            )?.name
+                            ? schools.find((school) => school.name === field.value)?.name
                             : "Selecciona una institución"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </FormControl>
             </PopoverTrigger>
-            <PopoverContent
-                className="w-[--radix-popover-trigger-width] p-0"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-            >
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
                     <CommandInput placeholder="Buscar institución..." />
                     <CommandList>
-                        {isLoading ? (
-                            <div className="p-4 text-sm text-center text-muted-foreground">Cargando escuelas...</div>
-                        ) : (
-                            <>
-                                <CommandEmpty>No se encontró la institución.</CommandEmpty>
-                                <CommandGroup>
-                                    {schools.map((school) => (
-                                        <CommandItem
-                                            value={school.name}
-                                            key={school.id}
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                            }}
-                                            onSelect={() => {
-                                                form.setValue("schoolName", school.name, { shouldValidate: true });
-                                                setOpen(false);
-                                            }}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    school.name === field.value
-                                                        ? "opacity-100"
-                                                        : "opacity-0"
-                                                )}
-                                            />
-                                            {school.name}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </>
-                        )}
+                        <CommandEmpty>No se encontró la institución.</CommandEmpty>
+                        <CommandGroup>
+                            {isLoading ? (
+                                <div className="p-4 text-center text-sm text-muted-foreground">Cargando...</div>
+                            ) : (
+                                schools.map((school) => (
+                                    <CommandItem
+                                        value={school.name}
+                                        key={school.id}
+                                        onSelect={() => {
+                                            field.onChange(school.name === field.value ? "" : school.name);
+                                            setOpen(false);
+                                        }}
+                                    >
+                                        <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                field.value === school.name ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                        {school.name}
+                                    </CommandItem>
+                                ))
+                            )}
+                        </CommandGroup>
                     </CommandList>
                 </Command>
             </PopoverContent>
         </Popover>
     );
 }
+
 
 export default function TurnosPage() {
   const { toast } = useToast();
@@ -744,7 +732,11 @@ export default function TurnosPage() {
                                     render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Nombre de la escuela o institución</FormLabel>
-                                            <SchoolCombobox field={field} form={form} schools={schools || []} isLoading={isLoadingSchools} />
+                                            <SchoolCombobox 
+                                                field={field} 
+                                                schools={schools || []} 
+                                                isLoading={isLoadingSchools} 
+                                            />
                                             <FormMessage />
                                         </FormItem>
                                     )}
