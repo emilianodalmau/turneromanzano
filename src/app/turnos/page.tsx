@@ -475,6 +475,7 @@ const dayNamesInEnglish: DayKey[] = ['sunday', 'monday', 'tuesday', 'wednesday',
 
 function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form: any, schools: School[], isLoading: boolean }) {
     const [open, setOpen] = useState(false);
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -496,11 +497,13 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
                     </Button>
                 </FormControl>
             </PopoverTrigger>
-            <PopoverContent
-                className="w-[--radix-popover-trigger-width] p-0"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-            >
-                <Command>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command
+                    onValueChange={(value) => {
+                        form.setValue("schoolName", value);
+                        setOpen(false);
+                    }}
+                >
                     <CommandInput placeholder="Buscar institución..." />
                     <CommandList>
                         {isLoading ? (
@@ -513,12 +516,8 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
                                         <CommandItem
                                             value={school.name}
                                             key={school.id}
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                            }}
-                                            onSelect={() => {
-                                                form.setValue("schoolName", school.name, { shouldValidate: true });
+                                            onSelect={(currentValue) => {
+                                                form.setValue("schoolName", schools.find(s => s.name.toLowerCase() === currentValue)?.name || "");
                                                 setOpen(false);
                                             }}
                                         >
