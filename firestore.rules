@@ -75,7 +75,7 @@ service cloud.firestore {
 
     match /schools/{schoolId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isManzanoAdmin();
     }
 
     match /appConfiguration/{configId} {
