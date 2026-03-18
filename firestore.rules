@@ -38,7 +38,7 @@ service cloud.firestore {
     match /appointments/{appointmentId} {
       allow create: if true;
       allow list, read: if true;
-      allow update, delete: if request.auth != null;
+      allow update, delete: if request.auth != null && isManzanoAdmin();
     }
 
     match /scheduleConfigurations/{scheduleId} {
