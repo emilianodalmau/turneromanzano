@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { Loader2, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ function SchoolUploader() {
         try {
             const reader = new FileReader();
             reader.onload = async (e) => {
+                let schoolsList: { escuelas: string }[] = [];
                 try {
                     const data = e.target?.result;
                     if (!data) {
@@ -33,7 +34,7 @@ function SchoolUploader() {
                     const workbook = XLSX.read(data, { type: 'binary' });
                     const sheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[sheetName];
-                    const schoolsList = XLSX.utils.sheet_to_json<{ escuelas: string }>(worksheet);
+                    schoolsList = XLSX.utils.sheet_to_json<{ escuelas: string }>(worksheet);
 
                     if (schoolsList.length === 0 || !schoolsList[0] || !('escuelas' in schoolsList[0])) {
                          toast({ variant: "destructive", title: "Formato Incorrecto", description: "El archivo Excel debe tener una columna llamada 'escuelas'." });
@@ -60,9 +61,21 @@ function SchoolUploader() {
                     }
 
                     toast({ title: 'Éxito', description: `${schoolsList.length} escuelas subidas correctamente.` });
-                } catch (err) {
-                    console.error("Error processing schools file:", err);
-                    toast({ variant: "destructive", title: "Error", description: "Ocurrió un problema al procesar el archivo. Asegúrate que el formato sea el correcto." });
+                } catch (err: any) {
+                    if (err.name === 'FirebaseError' && err.code === 'permission-denied') {
+                        const permissionError = new FirestorePermissionError({
+                            path: 'schools',
+                            operation: 'create',
+                            requestResourceData: { note: `Batch creating ${schoolsList.length} schools from Excel file.` }
+                        });
+                        errorEmitter.emit('permission-error', permissionError);
+                    } else {
+                        toast({ 
+                            variant: "destructive", 
+                            title: "Error al Procesar Archivo", 
+                            description: "Ocurrió un problema al leer o guardar los datos. Asegúrate de que el formato del archivo es correcto." 
+                        });
+                    }
                 } finally {
                     setIsUploadingSchools(false);
                     setSchoolFile(null);
@@ -75,7 +88,6 @@ function SchoolUploader() {
             reader.readAsBinaryString(schoolFile);
 
         } catch (error) {
-            console.error("Error initiating school upload:", error);
             toast({ variant: "destructive", title: "Error", description: "No se pudo iniciar la carga del archivo." });
             setIsUploadingSchools(false);
         }
