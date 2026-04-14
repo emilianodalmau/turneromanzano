@@ -514,12 +514,8 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
                                         <CommandItem
                                             value={school.name}
                                             key={school.id}
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                            }}
                                             onSelect={() => {
-                                                form.setValue("schoolName", school.name, { shouldValidate: true });
+                                                field.onChange(school.name);
                                                 setOpen(false);
                                             }}
                                         >

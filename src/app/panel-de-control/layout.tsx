@@ -215,7 +215,7 @@ export default function PanelDeControlLayout({
                 </div>
               </SidebarMenuItem>
                <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => signOut(auth)} tooltip="Cerrar Sesión">
+                <SidebarMenuButton onClick={() => auth && signOut(auth)} tooltip="Cerrar Sesión">
                     <LogOut />
                     <span>Cerrar Sesión</span>
                 </SidebarMenuButton>
