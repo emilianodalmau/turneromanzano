@@ -284,7 +284,7 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
             <FormField
               control={form.control}
               name="referenceId"
-              render={({ field }) => (
+              render={({ field }: { field: any }) => (
                 <FormItem>
                   <FormLabel>Número de Referencia</FormLabel>
                   <FormControl>
@@ -297,7 +297,7 @@ function UploadProofStep({ onBack, onUploadSuccess }: { onBack: () => void, onUp
             <FormField
               control={form.control}
               name="paymentProof"
-              render={({ field: { onChange, value, ...rest } }) => (
+              render={({ field: { onChange, value, ...rest } }: { field: any }) => (
                 <FormItem>
                   <FormLabel>Archivo del Comprobante</FormLabel>
                   <FormControl>
@@ -742,7 +742,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="schoolName"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel>Nombre de la escuela o institución</FormLabel>
                             <SchoolCombobox field={field} form={form} schools={schools || []} isLoading={isLoadingSchools} />
@@ -753,7 +753,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="visitorCount"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Cantidad de alumnos</FormLabel>
                             <FormControl>
@@ -766,7 +766,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="date"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel>Fecha de la visita</FormLabel>
                             <Popover>
@@ -820,7 +820,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="timeSlot"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Horario disponible</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || availableSlots.length === 0}>
@@ -846,7 +846,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="schoolDepartment"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Departamento de la institución</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
@@ -870,7 +870,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="schoolEmail"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Email de la institución</FormLabel>
                             <FormControl>
@@ -883,7 +883,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="higherAuthorityName"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Nombre de Autoridad Superior</FormLabel>
                             <FormControl>
@@ -901,7 +901,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="name"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Nombre</FormLabel>
                             <FormControl>
@@ -914,7 +914,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="lastName"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Apellido</FormLabel>
                             <FormControl>
@@ -927,7 +927,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="dni"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>DNI del responsable</FormLabel>
                             <FormControl>
@@ -940,7 +940,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="email"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Email de contacto</FormLabel>
                             <FormControl>
@@ -953,7 +953,7 @@ export default function TurnosPage() {
                       <FormField
                         control={form.control}
                         name="phone"
-                        render={({ field }) => (
+                        render={({ field }: { field: any }) => (
                           <FormItem>
                             <FormLabel>Teléfono de contacto</FormLabel>
                             <FormControl>

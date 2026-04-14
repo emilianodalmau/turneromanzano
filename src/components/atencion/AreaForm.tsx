@@ -80,7 +80,7 @@ export function AreaForm({ onFormSubmit }: AreaFormProps) {
         <FormField
           control={form.control}
           name="name"
-          render={({ field }) => (
+          render={({ field }: { field: any }) => (
             <FormItem>
               <FormLabel>Nombre del Área</FormLabel>
               <FormControl>
@@ -93,7 +93,7 @@ export function AreaForm({ onFormSubmit }: AreaFormProps) {
         <FormField
           control={form.control}
           name="description"
-          render={({ field }) => (
+          render={({ field }: { field: any }) => (
             <FormItem>
               <FormLabel>Descripción (Opcional)</FormLabel>
               <FormControl>

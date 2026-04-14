@@ -109,7 +109,7 @@ export function DeskForm({ areas, desk, onFormSubmit }: DeskFormProps) {
         <FormField
           control={form.control}
           name="name"
-          render={({ field }) => (
+          render={({ field }: { field: any }) => (
             <FormItem>
               <FormLabel>Nombre del Escritorio</FormLabel>
               <FormControl>
@@ -122,7 +122,7 @@ export function DeskForm({ areas, desk, onFormSubmit }: DeskFormProps) {
         <FormField
           control={form.control}
           name="areaId"
-          render={({ field }) => (
+          render={({ field }: { field: any }) => (
             <FormItem>
               <FormLabel>Área de Atención</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>

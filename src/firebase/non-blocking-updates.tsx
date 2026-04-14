@@ -26,7 +26,7 @@ export function setDocumentNonBlocking<T>(docRef: DocumentReference<T>, data: Wi
       'permission-error',
       new FirestorePermissionError({
         path: docRef.path,
-        operation: options.merge ? 'update' : 'write', 
+        operation: ('merge' in options && options.merge) ? 'update' : 'write', 
         requestResourceData: data,
       })
     )
