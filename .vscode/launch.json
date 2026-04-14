@@ -2,17 +2,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
+      "name": "Next.js: debug full stack",
+      "type": "node-terminal",
       "request": "launch",
+      "command": "npm run dev",
+      "serverReadyAction": {
+        "action": "debugWithChrome",
+        "pattern": "Local:.*(https?://\\S+)",
+        "uriFormat": "%s"
+      }
+    },
+    {
       "name": "Next.js: debug server-side",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev"
-      ],
-      "port": 9002,
-      "console": "integratedTerminal",
-      "preLaunchTask": "npm-install"
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev"
+    },
+    {
+      "name": "Next.js: debug client-side",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:9002"
     }
   ]
 }
