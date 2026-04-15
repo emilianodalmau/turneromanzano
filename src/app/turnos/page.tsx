@@ -861,34 +861,32 @@ export default function TurnosPage() {
                           </FormItem>
                         )}
                       />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="higherAuthorityName"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <FormLabel>Nombre de Autoridad Superior</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ej: Directora Ana María" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="higherAuthorityPosition"
-                          render={({ field }: { field: any }) => (
-                            <FormItem>
-                              <FormLabel>Cargo</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Ej: Directora, Vicedirectora" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="higherAuthorityName"
+                        render={({ field }: { field: any }) => (
+                          <FormItem>
+                            <FormLabel>Nombre de Autoridad Superior</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ej: Directora Ana María" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="higherAuthorityPosition"
+                        render={({ field }: { field: any }) => (
+                          <FormItem>
+                            <FormLabel>CARGO</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ej: Directora, Vicedirectora" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -925,7 +923,7 @@ export default function TurnosPage() {
                         name="responsiblePosition"
                         render={({ field }: { field: any }) => (
                           <FormItem>
-                            <FormLabel>Cargo</FormLabel>
+                            <FormLabel>CARGO</FormLabel>
                             <FormControl>
                               <Input placeholder="Ej: docente, secretario, profesor de gimnasia, etc." {...field} />
                             </FormControl>
