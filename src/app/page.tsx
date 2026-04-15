@@ -21,6 +21,7 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4 md:p-8">
        <div className="flex flex-col items-center justify-center text-center space-y-6">
+        <h1 className="text-4xl font-bold tracking-tight mb-4">Programa de Turismo Educativo 2026</h1>
         {isUserLoading ? (
             <p>Cargando...</p>
         ) : user ? (
