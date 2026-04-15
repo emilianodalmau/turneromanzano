@@ -167,10 +167,12 @@ export interface MutableAppointment {
   startTime: string;
   endTime: string;
   responsibleName: string;
+  responsiblePosition?: string;
   schoolName: string;
   schoolDepartment: string;
   schoolEmail?: string;
   higherAuthorityName?: string;
+  higherAuthorityPosition?: string;
   visitorCount: number;
   status: 'pending' | 'confirmed' | 'cancelled';
   paid?: boolean;

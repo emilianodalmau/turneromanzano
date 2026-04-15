@@ -45,11 +45,13 @@ const formSchema = z.object({
   schoolDepartment: z.string().min(1, 'Debe seleccionar un departamento.'),
   schoolEmail: z.string().min(1, { message: "El email de la institución es requerido." }).email('El email de la institución no es válido.'),
   higherAuthorityName: z.string().optional(),
+  higherAuthorityPosition: z.string().optional(),
   visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'Para mas de 50 alumnos tiene que sacar otro turno'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
   }),
   timeSlot: z.string().min(1, 'Se requiere seleccionar un horario.'),
+  responsiblePosition: z.string().optional(),
 });
 
 const uploadSchema = z.object({
@@ -138,6 +140,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           </div>
           <p>Cualquier inquietud adicional, no dude en comunicarse con nosotros al 2622-413102 desde las 09:00 a las 13:30 horas.</p>
           <p>Agradecemos nuevamente por elegir nuestro programa educativo y estamos seguros de que disfrutarán de esta enriquecedora experiencia en la historia y la naturaleza de Los Chacayes.</p>
+          <p>En caso de no adherir al Programa de Turismo Educativo y preferir hacer la visita por su cuenta sin utilizar nuestro servicio, la visita gratuita a los museos podrá realizarla a partir de las 16:00 hs hasta las 18:00 hs.</p>
           <p className="font-semibold">Saludos cordiales,<br />Dirección de Turismo de Tunuyán</p>
         </div>
         <div className="flex items-center space-x-2 pt-4">
@@ -555,8 +558,10 @@ export default function TurnosPage() {
       schoolDepartment: '',
       schoolEmail: '',
       higherAuthorityName: '',
+      higherAuthorityPosition: '',
       visitorCount: 1,
       timeSlot: '',
+      responsiblePosition: '',
     },
   });
 
@@ -620,6 +625,8 @@ export default function TurnosPage() {
         schoolDepartment: data.schoolDepartment,
         schoolEmail: data.schoolEmail,
         higherAuthorityName: data.higherAuthorityName || '',
+        higherAuthorityPosition: data.higherAuthorityPosition || '',
+        responsiblePosition: data.responsiblePosition || '',
         visitorCount: data.visitorCount,
         status: 'pending' as 'pending',
         paid: false,
@@ -854,19 +861,34 @@ export default function TurnosPage() {
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={form.control}
-                        name="higherAuthorityName"
-                        render={({ field }: { field: any }) => (
-                          <FormItem>
-                            <FormLabel>Nombre de Autoridad Superior</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Ej: Directora Ana María" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="higherAuthorityName"
+                          render={({ field }: { field: any }) => (
+                            <FormItem>
+                              <FormLabel>Nombre de Autoridad Superior</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ej: Directora Ana María" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="higherAuthorityPosition"
+                          render={({ field }: { field: any }) => (
+                            <FormItem>
+                              <FormLabel>Cargo</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ej: Directora, Vicedirectora" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -893,6 +915,19 @@ export default function TurnosPage() {
                             <FormLabel>Apellido</FormLabel>
                             <FormControl>
                               <Input placeholder="Ej: Pérez" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="responsiblePosition"
+                        render={({ field }: { field: any }) => (
+                          <FormItem>
+                            <FormLabel>Cargo</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ej: docente, secretario, profesor de gimnasia, etc." {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
