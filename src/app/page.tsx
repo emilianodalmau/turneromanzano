@@ -21,11 +21,6 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4 md:p-8">
        <div className="flex flex-col items-center justify-center text-center space-y-6">
-        <h1 className="text-4xl font-bold tracking-tight">Sistema de Turnos de Tunuyán</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl">
-          Bienvenido al portal de gestión de turnos de la Municipalidad de Tunuyán. Aquí puedes solicitar tus turnos para museos y licencias de conducir de manera rápida y sencilla.
-        </p>
-
         {isUserLoading ? (
             <p>Cargando...</p>
         ) : user ? (
@@ -37,7 +32,6 @@ export default function Home() {
         ) : null}
 
         <div className="w-full max-w-4xl pt-8">
-            <h2 className="text-2xl font-semibold mb-6">¿Qué trámite necesitas hacer?</h2>
             <div className="grid grid-cols-1 md:grid-cols-1 gap-6 max-w-md mx-auto">
                 {mainActions.map((action) => (
                 <Card key={action.href} className="hover:shadow-lg transition-shadow">
