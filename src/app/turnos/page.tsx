@@ -105,8 +105,8 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           <p>Esta aventura tiene una duración de una hora y treinta minutos aproximadamente. Se inicia con el encuentro con uno de nuestros guías en el ingreso al Museo Retorno a la Patria, continuando luego al Museo Arqueológico y de Ciencias Naturales (o viceversa). La experiencia prosigue con una visita al Monumento Retorno a la Patria, donde se realizará una foto grupal, y culmina en el icónico Árbol Histórico Manzano de Tunuyán.</p>
           <p>El programa incluye, además, el acceso gratuito y por el día (sin pernocte) al Camping Municipal para diversas actividades recreativas, siempre solicitando el cuidado de las instalaciones y el mantenimiento del orden y la limpieza.</p>
           <div>
-            <h4 className="font-semibold text-foreground">Costo del Programa:</h4>
-            <p>El Programa tiene un valor de 60 U.T.M. por persona. Esto equivale a un total de $6000 ($100 por U.T.M.).</p>
+            <h4 className="font-semibold text-foreground">Valor del Programa:</h4>
+            <p>El Programa tiene un valor de 50 U.T.M. por persona. Esto equivale a un total de $3500 ($70 UTM por persona).</p>
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Cómo concretar su visita:</h4>
@@ -121,7 +121,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Solicitud de Descuentos:</h4>
-            <p>Entendemos que, en ocasiones, algunos estudiantes podrían tener dificultades para afrontar el costo del programa. Si este fuera el caso, les sugerimos redactar una nota en formato PDF, con membrete de la escuela dirigida al Sr. Intendente Municipal, Profesor José Emir Andraos, solicitando la exención del pago de aquellos alumnos que no puedan solventar el programa. Por favor, envíe esta nota al correo desarrolloturísticotunuyan@gmail.com.</p>
+            <p>Entendemos que, en ocasiones, algunos estudiantes podrían tener dificultades para afrontar el valor del programa. Si este fuera el caso, les sugerimos redactar una nota en formato PDF, con membrete de la escuela dirigida al Sr. Intendente Municipal, Profesor José Emir Andraos, solicitando la exención del pago de aquellos alumnos que no puedan solventar el programa. Por favor, envíe esta nota al correo desarrolloturísticotunuyan@gmail.com.</p>
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Recomendaciones importantes para la visita a los museos:</h4>
