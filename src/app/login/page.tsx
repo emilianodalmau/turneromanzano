@@ -3,19 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp, setDocumentNonBlocking, useFirestore } from '@/firebase';
+import { useAuth, useUser, initiateEmailSignIn } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const auth = useAuth();
-  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
@@ -58,56 +56,6 @@ export default function LoginPage() {
       }
     }
   };
-  
-  const handleSignUp = async () => {
-    if (!auth || !firestore) return;
-    if (!email || !password) {
-      toast({
-        variant: "destructive",
-        title: "Campos incompletos",
-        description: "Por favor, ingresa un correo y contraseña para registrarte.",
-      });
-      return;
-    }
-
-    try {
-      const userCredential = await initiateEmailSignUp(auth, email, password);
-      const user = userCredential.user;
-      
-      const userDocRef = doc(firestore, 'users', user.uid);
-      const profileData = {
-          id: user.uid,
-          email: user.email,
-          role: 'manzano_admin', // Default role
-          name: '',
-          lastName: '',
-          dni: '',
-          phone: '',
-      }
-      setDocumentNonBlocking(userDocRef, profileData, { merge: true });
-
-      toast({
-        title: "Registro exitoso",
-        description: "Serás redirigido a tu panel de control.",
-      });
-      
-    } catch (error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-             toast({
-                variant: "destructive",
-                title: 'Error de Registro',
-                description: 'El correo electrónico ya está en uso. Por favor, intenta iniciar sesión o utiliza otro correo.',
-            });
-        } else {
-             toast({
-                variant: "destructive",
-                title: 'Error de Registro',
-                description: error.message,
-            });
-        }
-    }
-  };
-
 
   if (isUserLoading || user) {
     return (
@@ -152,9 +100,6 @@ export default function LoginPage() {
         <CardFooter className="flex flex-col gap-4">
           <Button onClick={handleSignIn} className="w-full">
             Iniciar Sesión
-          </Button>
-          <Button onClick={handleSignUp} variant="outline" className="w-full">
-            Registrarse
           </Button>
            <Link href="/" passHref className="w-full">
              <Button variant="link" className="w-full">Volver al Inicio</Button>
