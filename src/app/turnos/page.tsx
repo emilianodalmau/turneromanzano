@@ -18,7 +18,7 @@ import { useFirestore, useDoc, useMemoFirebase, useCollection, updateDocumentNon
 import { collection, doc, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { Appointment, ScheduleConfiguration, DayKey, TimeSlot, mendozaDepartments, School } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search, ChevronsUpDown, Check } from 'lucide-react';
+import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search, ChevronsUpDown, Check, FileText } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -124,6 +124,19 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           <div>
             <h4 className="font-semibold text-foreground">Solicitud de Descuentos:</h4>
             <p>Entendemos que, en ocasiones, algunos estudiantes podrían tener dificultades para afrontar el valor del programa. Si este fuera el caso, les sugerimos redactar una nota en formato PDF, con membrete de la escuela dirigida al Sr. Intendente Municipal, Profesor José Emir Andraos, solicitando la exención del pago de aquellos alumnos que no puedan solventar el programa. Por favor, envíe esta nota al correo desarrolloturísticotunuyan@gmail.com.</p>
+            <div className="mt-4">
+              <Button asChild variant="secondary" className="w-full md:w-auto h-auto py-4 px-6 gap-2 text-wrap text-center font-bold shadow-md hover:shadow-lg transition-all border-2 border-primary/20">
+                <a 
+                  href="https://docs.google.com/document/d/17HW917gft_4B_NnTegBvJ0W3upbVhmVH/edit?usp=sharing&ouid=105711283296231129104&rtpof=true&sd=true" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="w-5 h-5 flex-shrink-0" />
+                  MODELO DE NOTA PARA SOLICITAR EXENCION DEL VALOR DEL PROGRAMA.
+                </a>
+              </Button>
+            </div>
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Recomendaciones importantes para la visita a los museos:</h4>
