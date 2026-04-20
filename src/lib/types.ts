@@ -151,6 +151,7 @@ export interface ScheduleConfiguration {
     [key in DayKey]: DayConfiguration;
   };
   blockedDates?: string[]; // Array of 'YYYY-MM-DD'
+  leadTimeDays?: number; // Minimum days in advance to book a turno
 }
 
 // Omit 'id' from the base Appointment to prevent it from being overwritten during updates.

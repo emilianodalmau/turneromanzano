@@ -52,6 +52,7 @@ const formSchema = z.object({
     saturday: dayConfigSchema,
     sunday: dayConfigSchema,
   }),
+  leadTimeDays: z.coerce.number().min(0, 'Debe ser 0 o más'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -66,6 +67,7 @@ const defaultConfig: FormValues = {
     saturday: { enabled: false, slots: [] },
     sunday: { enabled: false, slots: [] },
   },
+  leadTimeDays: 0,
 };
 
 interface DayScheduleAccordionProps {
@@ -252,9 +254,11 @@ export default function ScheduleConfigPage() {
 
   useEffect(() => {
     if (!isDocLoading && scheduleConfig) {
-        // If scheduleConfig.days exists, use it; otherwise, use defaultConfig.days
-        const daysData = scheduleConfig.days ? { days: scheduleConfig.days } : { days: defaultConfig.days };
-        form.reset(daysData);
+        // Reset with scheduleConfig, including leadTimeDays if present
+        form.reset({
+            days: scheduleConfig.days || defaultConfig.days,
+            leadTimeDays: scheduleConfig.leadTimeDays ?? defaultConfig.leadTimeDays,
+        });
     } else if (!isDocLoading && !scheduleConfig) {
         // If the document doesn't exist, reset with the default config
         form.reset(defaultConfig);
@@ -272,10 +276,13 @@ export default function ScheduleConfigPage() {
         return;
     }
     // Use update to avoid overwriting blockedDates
-    updateDocumentNonBlocking(scheduleRef, { days: data.days });
+    updateDocumentNonBlocking(scheduleRef, { 
+        days: data.days,
+        leadTimeDays: data.leadTimeDays 
+    });
     toast({
-      title: 'Horarios actualizados',
-      description: 'La configuración de la agenda ha sido guardada correctamente.',
+      title: 'Configuración actualizada',
+      description: 'Los horarios y días de antelación han sido guardados correctamente.',
     });
   }
   
@@ -309,6 +316,37 @@ export default function ScheduleConfigPage() {
             </CardContent>
         </Card>
         
+        <Card>
+            <CardHeader>
+                <CardTitle>Días de Antelación</CardTitle>
+                <CardDescription>
+                    Configura cuántos días antes de la visita se deben solicitar los turnos. 
+                    Si pones 15, los usuarios solo podrán sacar turnos a partir de los próximos 15 días. 
+                    Usa 0 para permitir turnos desde hoy mismo (sujeto a disponibilidad).
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="leadTimeDays"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Mínimo de días de antelación</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit">Guardar Días de Antelación</Button>
+                    </form>
+                </Form>
+            </CardContent>
+        </Card>
+
         <BlockedDatesManager scheduleRef={scheduleRef} initialBlockedDates={scheduleConfig?.blockedDates} />
     </div>
   );

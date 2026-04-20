@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, PartyPopper, Copy, AlertCircle, Upload, FileCheck, Loader2, Search, ChevronsUpDown, Check, FileText } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn, generateReadableId } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -109,6 +109,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           <div>
             <h4 className="font-semibold text-foreground">Valor del Programa:</h4>
             <p>El Programa tiene un valor de 50 U.T.M. por persona. Esto equivale a un total de $3500 ($70 UTM por persona).</p>
+            <p>Solicitado el turno, recibirá una respuesta al correo electrónico informado en el formulario, a partir de esa fecha, Ud. tendrá 15 (quince) días corridos para realizar la transferencia bancaria, de lo contrario el turno será cancelado y rehabilitado para ser elegido nuevamente.</p>
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Cómo concretar su visita:</h4>
@@ -791,7 +792,12 @@ export default function TurnosPage() {
                                     if (isScheduleLoading) return true;
                                     const today = new Date();
                                     today.setHours(0, 0, 0, 0);
-                                    if (date < today) return true;
+
+                                    const leadTimeDays = scheduleConfig?.leadTimeDays || 0;
+                                    const minDate = addDays(today, leadTimeDays);
+
+                                    if (date < minDate) return true;
+                                    
                                     const dateString = format(date, 'yyyy-MM-dd');
                                     if (scheduleConfig?.blockedDates?.includes(dateString)) {
                                       return true;
