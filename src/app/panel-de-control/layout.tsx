@@ -67,20 +67,20 @@ export default function PanelDeControlLayout({
               <>
                 <SidebarMenuItem>
                   <Link href="/panel-de-control/configuracion-de-agenda">
-                    <SidebarMenuButton asChild tooltip="Agenda Museo" isActive={pathname.startsWith('/panel-de-control/configuracion-de-agenda')}>
+                    <SidebarMenuButton asChild tooltip="Agenda Parque" isActive={pathname.startsWith('/panel-de-control/configuracion-de-agenda')}>
                       <span>
                         <CalendarDays />
-                        <span>Agenda Museo</span>
+                        <span>Agenda Parque</span>
                       </span>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <Link href="/panel-de-control/turnos">
-                    <SidebarMenuButton asChild tooltip="Turnos Museo" isActive={pathname.startsWith('/panel-de-control/turnos')}>
+                    <SidebarMenuButton asChild tooltip="Turnos Parque" isActive={pathname.startsWith('/panel-de-control/turnos')}>
                       <span>
                         <Ticket />
-                        <span>Turnos Museo</span>
+                        <span>Turnos Parque</span>
                       </span>
                     </SidebarMenuButton>
                   </Link>

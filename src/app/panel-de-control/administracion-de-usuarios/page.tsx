@@ -210,7 +210,7 @@ function UserFormDialog({
                 <SelectValue placeholder="Seleccionar rol" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="manzano_admin">Admin Museo</SelectItem>
+                <SelectItem value="manzano_admin">Admin Parque</SelectItem>
                 <SelectItem value="license_admin">Admin Licencias</SelectItem>
               </SelectContent>
             </Select>
@@ -248,7 +248,7 @@ function UserList({ users, currentUser }: { users: User[], currentUser: User | n
     const getRoleName = (role?: string) => {
         switch(role) {
             case 'super_admin': return 'Super Admin';
-            case 'manzano_admin': return 'Admin Museo';
+            case 'manzano_admin': return 'Admin Parque';
             case 'license_admin': return 'Admin Licencias';
             default: return 'Sin rol';
         }

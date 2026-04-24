@@ -11,7 +11,7 @@ export default function Home() {
 
   const mainActions = [
     {
-      title: 'Turnos para el Museo',
+      title: 'Turnos de visitas al Parque Temático Sanmartiniano',
       description: 'Solicita un turno para visitas educativas al Manzano Histórico.',
       href: '/turnos',
       icon: Ticket,

@@ -176,7 +176,7 @@ export default function MyProfilePage() {
                           <RadioGroupItem value="manzano_admin" />
                         </FormControl>
                         <FormLabel className="font-normal">
-                          Administrador Museo
+                          Administrador Parque
                         </FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-3 space-y-0">

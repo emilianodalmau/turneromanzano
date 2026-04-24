@@ -42,11 +42,12 @@ const formSchema = z.object({
   phone: z.string().min(1, 'El teléfono es requerido.'),
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
   schoolName: z.string().min(1, 'El nombre de la institución es requerido.'),
+  customSchoolName: z.string().optional(),
   schoolDepartment: z.string().min(1, 'Debe seleccionar un departamento.'),
   schoolEmail: z.string().min(1, { message: "El email de la institución es requerido." }).email('El email de la institución no es válido.'),
   higherAuthorityName: z.string().optional(),
   higherAuthorityPosition: z.string().optional(),
-  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'Para mas de 50 alumnos tiene que sacar otro turno'),
+  visitorCount: z.coerce.number().min(1, 'Debe haber al menos 1 alumno.').max(50, 'El máximo de alumnos es de 50 por turno; si excede el número, complete otro Formulario con el número de personas restantes.'),
   date: z.date({
     required_error: 'Se requiere una fecha para la visita.',
   }),
@@ -67,7 +68,7 @@ function InitialStep({ onSelectOption }: { onSelectOption: (option: 'new' | 'upl
   return (
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl md:text-3xl text-center">Gestión de Turnos para el Museo</CardTitle>
+        <CardTitle className="text-2xl md:text-3xl text-center">Gestión de Turnos para el Parque Temático Sanmartiniano</CardTitle>
         <CardDescription className="text-center pt-2">
           ¿Qué deseas hacer?
         </CardDescription>
@@ -104,7 +105,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           <h3 className="text-lg font-semibold text-foreground">Programa de Turismo Educativo 2026: "Un viaje a la naturaleza y la historia de Los Chacayes"</h3>
           <p>Estimada/o docente,</p>
           <p>Desde la Dirección de Turismo de Tunuyán, nos complace presentarles nuestro Programa de Turismo Educativo: "Un viaje a la naturaleza y la historia de Los Chacayes". Una experiencia diseñada para enriquecer el aprendizaje de sus estudiantes y conectar con el valioso patrimonio de nuestra región.</p>
-          <p>Esta aventura tiene una duración de una hora y treinta minutos aproximadamente. Se inicia con el encuentro con uno de nuestros guías en el ingreso al Museo Retorno a la Patria, continuando luego al Museo Arqueológico y de Ciencias Naturales (o viceversa). La experiencia prosigue con una visita al Monumento Retorno a la Patria, donde se realizará una foto grupal, y culmina en el icónico Árbol Histórico Manzano de Tunuyán.</p>
+          <p>Esta aventura tiene una duración de una hora y treinta minutos aproximadamente. Se inicia con el encuentro con uno de nuestros guías en el ingreso al Parque Temático Sanmartiniano, recorriendo los museos "Retorno a la Patria" y "Arqueológico y de Ciencias Naturales". La experiencia prosigue con una visita al Monumento Retorno a la Patria, donde se realizará una foto grupal, y culmina en el icónico Árbol Histórico Manzano de Tunuyán.</p>
           <p>El programa incluye, además, el acceso gratuito y por el día (sin pernocte) al Camping Municipal para diversas actividades recreativas, siempre solicitando el cuidado de las instalaciones y el mantenimiento del orden y la limpieza.</p>
           <div>
             <h4 className="font-semibold text-foreground">Valor del Programa:</h4>
@@ -120,7 +121,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
               <li>Realizar el pago: Tras la recepción y aceptación de su formulario, le indicaremos cómo proceder con el abono del programa.</li>
               <li>Coordinar el transporte: Contrate el servicio de transporte que los conducirá hasta el Paraje Manzano Histórico.</li>
             </ol>
-            <p className="mt-2">El día de la visita, nuestro equipo de guías los estará esperando en la puerta de los museos para iniciar esta fascinante experiencia.</p>
+            <p className="mt-2">El día de la visita, nuestro equipo de guías los estará esperando en la puerta del Parque Temático Sanmartiniano para iniciar esta fascinante experiencia.</p>
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Solicitud de Descuentos:</h4>
@@ -140,8 +141,8 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
             </div>
           </div>
           <div>
-            <h4 className="font-semibold text-foreground">Recomendaciones importantes para la visita a los museos:</h4>
-            <p>Para garantizar una experiencia óptima y fluida dentro de los museos, y para la conservación de nuestro patrimonio, les solicitamos amablemente tener en cuenta lo siguiente:</p>
+            <h4 className="font-semibold text-foreground">Recomendaciones importantes para la visita al Parque Temático Sanmartiniano:</h4>
+            <p>Para garantizar una experiencia óptima y fluida dentro del Parque Temático Sanmartiniano, y para la conservación de nuestro patrimonio, les solicitamos amablemente tener en cuenta lo siguiente:</p>
             <ul className="list-none mt-2 space-y-1">
               <li>🚫 No fumar.</li>
               <li>🚫 No ingresar ni consumir dentro de los edificios ningún tipo de alimentos o bebidas (agua, mate, gaseosas, golosinas, sándwiches, etc.).</li>
@@ -154,7 +155,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           </div>
           <p>Cualquier inquietud adicional, no dude en comunicarse con nosotros al 2622-413102 desde las 09:00 a las 13:30 horas.</p>
           <p>Agradecemos nuevamente por elegir nuestro programa educativo y estamos seguros de que disfrutarán de esta enriquecedora experiencia en la historia y la naturaleza de Los Chacayes.</p>
-          <p>En caso de no adherir al Programa de Turismo Educativo y preferir hacer la visita por su cuenta sin utilizar nuestro servicio, la visita gratuita a los museos podrá realizarla a partir de las 16:00 hs hasta las 18:00 hs.</p>
+          <p>En caso de no adherir al Programa de Turismo Educativo y preferir hacer la visita por su cuenta sin utilizar nuestro servicio, la visita gratuita al Parque Temático Sanmartiniano podrá realizarla a partir de las 16:00 hs hasta las 18:00 hs.</p>
           <p className="font-semibold">Saludos cordiales,<br />Dirección de Turismo de Tunuyán</p>
         </div>
         <div className="flex items-center space-x-2 pt-4">
@@ -494,9 +495,12 @@ function SchoolCombobox({ field, form, schools, isLoading }: { field: any, form:
     const [searchTerm, setSearchTerm] = useState('');
 
     // Deduplicate schools by name to avoid duplicate key errors in Select
-    const uniqueSchools = schools.filter((school, index, self) =>
-        index === self.findIndex((s) => s.name === school.name)
-    );
+    const uniqueSchools = [
+        ...schools.filter((school, index, self) =>
+            index === self.findIndex((s) => s.name === school.name)
+        ),
+        { id: 'otra-option', name: 'OTRA' }
+    ];
 
     const filteredSchools = uniqueSchools.filter((school) =>
         school.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -635,7 +639,7 @@ export default function TurnosPage() {
         startTime: selectedSlot.startTime,
         endTime: selectedSlot.endTime,
         responsibleName: `${data.name} ${data.lastName}`,
-        schoolName: data.schoolName,
+        schoolName: data.schoolName === 'OTRA' ? (data.customSchoolName || 'OTRA') : data.schoolName,
         schoolDepartment: data.schoolDepartment,
         schoolEmail: data.schoolEmail,
         higherAuthorityName: data.higherAuthorityName || '',
@@ -718,7 +722,7 @@ export default function TurnosPage() {
               <CardDescription>
                 <p className="font-bold">Leer atentamente:</p>
                 <ul className="list-disc list-inside text-muted-foreground mt-2">
-                  <li>El Programa de Turismo Educativo 2026 es a partir de los 8 años.</li>
+                  <li>El Programa de Turismo Educativo 2026 es a partir de los 5 años.</li>
                   <li>La visita es guiada por el Parque Temático Sanmartiniano.</li>
                   <li>El máximo de alumnos es de 50 en total por turno.</li>
                   <li>Con la posibilidad de llevar hasta 6 acompañantes.</li>
@@ -745,6 +749,22 @@ export default function TurnosPage() {
                           </FormItem>
                         )}
                       />
+
+                      {form.watch('schoolName') === 'OTRA' && (
+                          <FormField
+                              control={form.control}
+                              name="customSchoolName"
+                              render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Nombre de la Institución (Especificar)</FormLabel>
+                                      <FormControl>
+                                          <Input placeholder="Escriba el nombre de la institución" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )}
+                          />
+                      )}
                       <FormField
                         control={form.control}
                         name="visitorCount"
@@ -752,7 +772,7 @@ export default function TurnosPage() {
                           <FormItem>
                             <FormLabel>Cantidad de alumnos</FormLabel>
                             <FormControl>
-                              <Input type="number" min="1" max="50" placeholder="Ej: 25" {...field} />
+                              <Input type="number" min="1" placeholder="Ej: 25" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

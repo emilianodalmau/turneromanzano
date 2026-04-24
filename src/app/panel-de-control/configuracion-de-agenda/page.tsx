@@ -216,7 +216,7 @@ function BlockedDatesManager({ scheduleRef, initialBlockedDates }: { scheduleRef
             <CardHeader>
                 <CardTitle>Bloquear Fechas Específicas</CardTitle>
                 <CardDescription>
-                    Selecciona los días festivos o fechas particulares en las que el museo no trabajará. 
+                    Selecciona los días festivos o fechas particulares en las que el Parque Temático Sanmartiniano no trabajará. 
                     Estos días no permitirán sacar turnos, independientemente de la configuración semanal.
                 </CardDescription>
             </CardHeader>
