@@ -756,9 +756,9 @@ export default function TurnosPage() {
                               name="customSchoolName"
                               render={({ field }) => (
                                   <FormItem>
-                                      <FormLabel>Nombre de la Institución (Especificar)</FormLabel>
+                                      <FormLabel>Escriba el número de la escuela - nombre de la escuela</FormLabel>
                                       <FormControl>
-                                          <Input placeholder="Escriba el nombre de la institución" {...field} />
+                                          <Input placeholder="Ej: 1-123 - Escuela Manuel Belgrano" {...field} />
                                       </FormControl>
                                       <FormMessage />
                                   </FormItem>
