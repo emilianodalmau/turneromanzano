@@ -109,7 +109,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           <p>El programa incluye, además, el acceso gratuito y por el día (sin pernocte) al Camping Municipal para diversas actividades recreativas, siempre solicitando el cuidado de las instalaciones y el mantenimiento del orden y la limpieza.</p>
           <div>
             <h4 className="font-semibold text-foreground">Valor del Programa:</h4>
-            <p>El Programa tiene un valor de 50 U.T.M. por persona. Esto equivale a un total de $3500 ($70 UTM por persona).</p>
+            <p>El Programa tiene un valor de 50 U.T.M. por persona. Esto equivale a un total de $3500.</p>
             <p>Solicitado el turno, recibirá una respuesta al correo electrónico informado en el formulario, a partir de esa fecha, Ud. tendrá 15 (quince) días corridos para realizar la transferencia bancaria, de lo contrario el turno será cancelado y rehabilitado para ser elegido nuevamente.</p>
           </div>
           <div>
@@ -129,9 +129,8 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
             <div className="mt-4">
               <Button asChild variant="secondary" className="w-full md:w-auto h-auto py-4 px-6 gap-2 text-wrap text-center font-bold shadow-md hover:shadow-lg transition-all border-2 border-primary/20">
                 <a 
-                  href="https://docs.google.com/document/d/17HW917gft_4B_NnTegBvJ0W3upbVhmVH/edit?usp=sharing&ouid=105711283296231129104&rtpof=true&sd=true" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                  href="/modelo-nota-exencion.docx" 
+                  download="MODELO DE NOTA PARA SOLICITAR EXENCION DEL VALOR DEL PROGRAMA.docx"
                   className="flex items-center gap-2"
                 >
                   <FileText className="w-5 h-5 flex-shrink-0" />
@@ -451,7 +450,9 @@ function CheckStatusStep({ onBack }: { onBack: () => void }) {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between"><span>Institución:</span> <span className="font-semibold">{appointment.schoolName}</span></div>
+              <div className="flex justify-between"><span>Departamento:</span> <span className="font-semibold">{appointment.schoolDepartment}</span></div>
               <div className="flex justify-between"><span>Responsable:</span> <span className="font-semibold">{appointment.responsibleName}</span></div>
+              {appointment.responsiblePosition && <div className="flex justify-between"><span>Cargo:</span> <span className="font-semibold">{appointment.responsiblePosition}</span></div>}
               <div className="flex justify-between"><span>Fecha:</span> <span className="font-semibold">{format(new Date(appointment.date + 'T00:00:00'), "dd/MM/yyyy")}</span></div>
               <div className="flex justify-between"><span>Horario:</span> <span className="font-semibold">{appointment.startTime}</span></div>
               <Separator />

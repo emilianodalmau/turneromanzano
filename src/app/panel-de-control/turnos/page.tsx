@@ -4,7 +4,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, setDocumentNonBlocking, useDoc } from '@/firebase';
-import { Appointment, ScheduleConfiguration, TimeSlot, DayKey, Guest } from '@/lib/types';
+import { Appointment, ScheduleConfiguration, TimeSlot, DayKey, Guest, mendozaDepartments } from '@/lib/types';
 import { collection, query, doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,8 @@ const editFormSchema = z.object({
   dni: z.string().min(7, 'El DNI debe tener al menos 7 caracteres.'),
   email: z.string().email('Correo electrónico no válido.'),
   phone: z.string().min(1, 'El teléfono es requerido.'),
+  responsiblePosition: z.string().optional(),
+  schoolDepartment: z.string().min(1, 'Debe seleccionar un departamento.'),
 });
 
 type EditFormValues = z.infer<typeof editFormSchema>;
@@ -96,6 +98,8 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         dni: guestData?.dni || '',
         email: guestData?.email || '',
         phone: guestData?.phone || '',
+        responsiblePosition: appointment.responsiblePosition || '',
+        schoolDepartment: appointment.schoolDepartment || '',
     }), [appointment, guestData]);
 
     const form = useForm<EditFormValues>({
@@ -176,6 +180,8 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
             startTime: selectedSlot.startTime,
             endTime: selectedSlot.endTime,
             status: data.status,
+            responsiblePosition: data.responsiblePosition,
+            schoolDepartment: data.schoolDepartment,
         };
 
         setDocumentNonBlocking(appointmentRef, updatedAppointment, { merge: true });
@@ -224,6 +230,24 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                                     <FormMessage />
                                 </FormItem>
                             )}/>
+                            <FormField control={form.control} name="schoolDepartment" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Departamento de la Institución</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Selecciona un departamento" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {mendozaDepartments.map((dept: string) => (
+                                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
                             <FormField control={form.control} name="schoolEmail" render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Email Institución</FormLabel>
@@ -235,6 +259,13 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
                                 <FormItem>
                                     <FormLabel>Responsable</FormLabel>
                                     <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}/>
+                            <FormField control={form.control} name="responsiblePosition" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Cargo del Responsable</FormLabel>
+                                    <FormControl><Input placeholder="Ej: Director, Docente, etc." {...field} /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}/>
@@ -561,6 +592,8 @@ function AppointmentList({ appointments, guests }: { appointments: Appointment[]
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <p className="text-sm text-muted-foreground">Responsable: {appointment.responsibleName}</p>
+                                    {appointment.responsiblePosition && <p className="text-sm text-muted-foreground">Cargo: {appointment.responsiblePosition}</p>}
+                                    {appointment.schoolDepartment && <p className="text-sm text-muted-foreground">Depto Inst: {appointment.schoolDepartment}</p>}
                                     {appointment.schoolEmail && <p className="text-sm text-muted-foreground">Email Inst: {appointment.schoolEmail}</p>}
                                     <p className="text-sm text-muted-foreground">Alumnos: {appointment.visitorCount}</p>
                                     <div className="flex items-center">
