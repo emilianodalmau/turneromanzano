@@ -125,7 +125,7 @@ function TermsAndConditionsStep({ onAccepted, onBack }: { onAccepted: () => void
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Solicitud de Descuentos:</h4>
-            <p>Entendemos que, en ocasiones, algunos estudiantes podrían tener dificultades para afrontar el valor del programa. Si este fuera el caso, les sugerimos redactar una nota en formato PDF, con membrete de la escuela dirigida al Sr. Intendente Municipal, Profesor José Emir Andraos, solicitando la exención del pago de aquellos alumnos que no puedan solventar el programa. Por favor, envíe esta nota al correo desarrolloturísticotunuyan@gmail.com.</p>
+            <p>Entendemos que, en ocasiones, algunos estudiantes podrían tener dificultades para afrontar el valor del programa. Si este fuera el caso, les sugerimos redactar una nota en formato PDF, con membrete de la escuela dirigida al Sr. Intendente Municipal, Profesor José Emir Andraos, solicitando la exención del pago de aquellos alumnos que no puedan solventar el programa. Por favor, envíe esta nota al correo turismoeducativo@tunuyan.gov.ar.</p>
             <div className="mt-4">
               <Button asChild variant="secondary" className="w-full md:w-auto h-auto py-4 px-6 gap-2 text-wrap text-center font-bold shadow-md hover:shadow-lg transition-all border-2 border-primary/20">
                 <a 
