@@ -115,6 +115,7 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
 
 
     const selectedDate = form.watch('date');
+    const visitorCount = form.watch('visitorCount');
 
     useEffect(() => {
         if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
@@ -133,16 +134,18 @@ function EditAppointmentSheet({ appointment }: { appointment: Appointment }) {
         const appointmentsOnSelectedDate = (allAppointments || [])
             .filter(app => app.date === format(selectedDate, 'yyyy-MM-dd') && app.id !== appointment.id);
 
+        const currentVisitorCount = Number(visitorCount) || 1;
+
         const available = dayConfig.slots.filter((slot) => {
-            const appointmentsInSlot = appointmentsOnSelectedDate
-                .filter((app) => app.startTime === slot.startTime)
-                .length;
+            const occupiedCapacity = appointmentsOnSelectedDate
+                .filter((app) => app.startTime === slot.startTime && app.status !== 'cancelled')
+                .reduce((sum, app) => sum + (app.visitorCount || 0), 0);
             
-            return appointmentsInSlot < slot.capacity;
+            return (occupiedCapacity + currentVisitorCount) <= slot.capacity;
         });
 
         setAvailableSlots(available);
-    }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading, appointment.id]);
+    }, [selectedDate, visitorCount, scheduleConfig, allAppointments, areAppointmentsLoading, appointment.id]);
 
     async function onSubmit(data: EditFormValues) {
         if (!firestore) return;

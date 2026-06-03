@@ -585,6 +585,7 @@ export default function TurnosPage() {
   });
 
   const selectedDate = form.watch('date');
+  const visitorCount = form.watch('visitorCount');
 
   useEffect(() => {
     if (!selectedDate || !scheduleConfig || areAppointmentsLoading) {
@@ -608,16 +609,18 @@ export default function TurnosPage() {
       (app) => app.date === format(selectedDate, 'yyyy-MM-dd')
     );
 
-    const available = dayConfig.slots.filter((slot) => {
-      const appointmentsInSlot = appointmentsOnSelectedDate.filter(
-        (app) => app.startTime === slot.startTime
-      ).length;
+    const currentVisitorCount = Number(visitorCount) || 1;
 
-      return appointmentsInSlot < slot.capacity;
+    const available = dayConfig.slots.filter((slot) => {
+      const occupiedCapacity = appointmentsOnSelectedDate
+        .filter((app) => app.startTime === slot.startTime && app.status !== 'cancelled')
+        .reduce((sum, app) => sum + (app.visitorCount || 0), 0);
+
+      return (occupiedCapacity + currentVisitorCount) <= slot.capacity;
     });
 
     setAvailableSlots(available);
-  }, [selectedDate, scheduleConfig, allAppointments, areAppointmentsLoading]);
+  }, [selectedDate, visitorCount, scheduleConfig, allAppointments, areAppointmentsLoading]);
 
   async function onSubmit(data: FormValues) {
     if (!firestore) {

@@ -133,7 +133,7 @@ function EditLicenseAppointmentSheet({ appointment }: { appointment: LicenseAppo
 
         const available = dayConfig.slots.filter((slot) => {
             const appointmentsInSlot = appointmentsOnSelectedDate
-                .filter((app) => app.startTime === slot.startTime)
+                .filter((app) => app.startTime === slot.startTime && app.status !== 'cancelled')
                 .length;
             
             return appointmentsInSlot < slot.capacity;
